@@ -55,89 +55,106 @@ def cli(ctx: click.Context) -> None:
     "--input",
     "input_path",
     type=str,
-    help=(
-        "Source directory (warehouse). Can be a path or alias: "
-        "warehouse, agent, claude, opencode, gemini, antigravity"
-    ),
+    help="Source agent (claude, agent, gemini, opencode, antigravity, warehouse).",
 )
 @click.option(
     "-o",
     "--output",
     "output_path",
     type=str,
-    help=(
-        "Target directory (where skills will be linked). Can be a path or alias: "
-        "agent, claude, opencode, gemini, antigravity"
-    ),
+    help="Target agent (claude, agent, gemini, opencode, antigravity).",
 )
 @click.option(
-    "-g",
-    "--global",
-    "use_global",
-    is_flag=True,
-    help="Use global skills from ~/.agent/skills.",
+    "--input-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for input: global (~/.<agent>/skills) or local (./.<agent>/skills).",
 )
 @click.option(
-    "-l",
-    "--local",
-    "use_local",
+    "--output-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for output: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--all",
+    "sync_all",
     is_flag=True,
-    help="Use local skills from ./.agent/skills.",
+    help="Sync from both global and local sources.",
 )
 @click.option("--no-tui", is_flag=True, help="Run in non-TUI mode (list skills only).")
 def sync(
     input_path: Optional[str],
     output_path: Optional[str],
-    use_global: bool,
-    use_local: bool,
+    input_scope: str,
+    output_scope: str,
+    sync_all: bool,
     no_tui: bool,
 ) -> None:
-    """Sync skills between source and target directory.
-
-    In interactive mode (default), shows a checkbox interface to select
-    which skills to enable. In --no-tui mode, just lists current skills.
-
-    By default uses global skills. Use -l/--local to use local skills.
+    """Sync skills between source and target directories.
 
     \b
     Examples:
-        skillboard sync -o claude           # Uses global skills (default)
-        skillboard sync -o claude -g        # Explicitly use global skills
-        skillboard sync -o claude -l        # Use local skills from ./.agent/skills
-        skillboard sync -i warehouse -o claude
-        skillboard sync -o claude --no-tui
+        skillboard sync -o claude                    # global -> global
+        skillboard sync -i claude -o agent           # global claude -> global agent
+        skillboard sync -i claude --input-scope local -o agent   # local claude -> global agent
+        skillboard sync -i claude -o agent --output-scope local  # global claude -> local agent
+        skillboard sync -i claude --all -o agent     # (global+local) claude -> global agent
     """
     config = get_config()
 
-    # Determine source based on flags
-    if use_local and use_global:
-        console.print("[red]Error: Cannot use both --global and --local flags.[/red]")
-        sys.exit(1)
-
-    # Resolve input path
-    if input_path is not None:
-        # Explicit input path provided
-        if input_path in config.paths.list_paths():
-            source = config.paths.get_path(input_path)
-        else:
-            source = Path(input_path).expanduser()
-    elif use_local:
-        # Use local skills
-        source = Path(".agent/skills")
+    # Resolve source
+    if input_path is None:
+        # Default source is agent
+        source_agent = "agent"
     else:
-        # Default: use global agent skills
-        source = config.paths.agent
+        source_agent = input_path.lower()
 
-    # Resolve output path
+    if sync_all:
+        # Need to handle multiple sources
+        sources = []
+        if source_agent in config.paths.list_paths():
+            global_path = config.paths.get_path(source_agent)
+            if global_path.exists():
+                sources.append(global_path)
+            local_path = Path(f"./.{source_agent}/skills")
+            if local_path.exists():
+                sources.append(local_path)
+        else:
+            console.print(f"[red]Unknown source agent: {source_agent}[/red]")
+            sys.exit(1)
+
+        if not sources:
+            console.print(f"[red]No skills found for {source_agent}[/red]")
+            sys.exit(1)
+
+        # For now, use first available source
+        source = sources[0]
+        if len(sources) > 1:
+            console.print(f"[dim]Note: Using {sources[0]} (found {len(sources)} sources)[/dim]")
+    else:
+        # Single source based on scope
+        if source_agent in config.paths.list_paths():
+            if input_scope == "local":
+                source = Path(f"./.{source_agent}/skills")
+            else:
+                source = config.paths.get_path(source_agent)
+        else:
+            console.print(f"[red]Unknown source agent: {source_agent}[/red]")
+            console.print(f"Available: {', '.join(config.paths.list_paths().keys())}")
+            sys.exit(1)
+
+    # Resolve target
     if output_path is None:
         console.print("[red]Error: Target directory is required. Use -o/--output option.[/red]")
-        console.print("\nAvailable aliases:")
-        for name, path in config.paths.list_paths().items():
-            if name != "warehouse":
-                console.print(f"  {name}: {path}")
         sys.exit(1)
-    elif output_path in config.paths.list_paths():
-        target = config.paths.get_path(output_path)
+
+    target_agent = output_path.lower()
+    if target_agent in config.paths.list_paths():
+        if output_scope == "local":
+            target = Path(f"./.{target_agent}/skills")
+        else:
+            target = config.paths.get_path(target_agent)
     else:
         target = Path(output_path).expanduser()
 
