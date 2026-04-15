@@ -422,22 +422,31 @@ def init(migrate: bool) -> None:
     default="global",
     help="Scope for output: global (~/.<agent>/skills) or local (./.<agent>/skills).",
 )
+@click.option(
+    "--all",
+    is_flag=True,
+    help="Copy all skills without interactive selection.",
+)
 def copy(
     input_path: Optional[str],
     output_path: Optional[str],
     input_scope: str,
     output_scope: str,
+    all: bool,
 ) -> None:
     """Copy skills from source to target (not symlink).
 
-    Unlike sync, this creates actual copies of the skill directories.
+    Interactive by default - use --all to copy all skills without selection.
 
     \b
     Examples:
-        skillboard copy -i claude -o agent                    # global -> global
+        skillboard copy -i claude -o agent                    # Interactive select
+        skillboard copy -i claude -o agent --all              # Copy all
         skillboard copy -i claude --input-scope local -o agent # local -> global
         skillboard copy -i claude -o agent --output-scope local # global -> local
     """
+    from .tui import select_skills_interactive
+
     config = get_config()
 
     # Resolve source
@@ -481,15 +490,51 @@ def copy(
         console.print(f"[yellow]No skills found in {source_path}[/yellow]")
         return
 
-    console.print(f"Copying {len(skills)} skills from {source_path} to {target_path}...\n")
+    # Select skills interactively unless --all is specified
+    if all:
+        selected_skills = {skill.name for skill in skills}
+        console.print(f"[dim]Copying all {len(selected_skills)} skills...[/dim]\n")
+    else:
+        selected = select_skills_interactive(
+            skills,
+            source_path,
+            target_path,
+            operation="copy",
+        )
+        if selected is None:
+            return
+        selected_skills = selected
+        if not selected_skills:
+            console.print("\n[yellow]No skills selected.[/yellow]")
+            return
 
-    import shutil
+    # Confirm before copying
+    if not all:
+        try:
+            import inquirer
+
+            confirm_q = [
+                inquirer.Confirm(
+                    "confirm", message=f"Copy {len(selected_skills)} skill(s)?", default=True
+                )
+            ]
+            confirm_a = inquirer.prompt(confirm_q)
+            if not confirm_a or not confirm_a["confirm"]:
+                console.print("\n[yellow]Cancelled.[/yellow]")
+                return
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Cancelled.[/yellow]")
+            return
+
+    console.print(f"\n[bold]Copying {len(selected_skills)} skills...[/bold]\n")
 
     copied = 0
     skipped = 0
     errors = 0
 
     for skill in skills:
+        if skill.name not in selected_skills:
+            continue
         dest = target_path / skill.name
         if dest.exists():
             console.print(f"[yellow]⚠ Skipped (exists):[/yellow] {skill.name}")
@@ -543,6 +588,11 @@ def copy(
     is_flag=True,
     help="Show what would be moved without actually moving.",
 )
+@click.option(
+    "--all",
+    is_flag=True,
+    help="Move all skills without interactive selection.",
+)
 def move(
     input_path: Optional[str],
     output_path: Optional[str],
@@ -550,19 +600,23 @@ def move(
     output_scope: str,
     force: bool,
     dry_run: bool,
+    all: bool,
 ) -> None:
     """Move skills from source to target (copy + delete from source).
 
-    This command copies skills to the target and removes them from the source.
+    Interactive by default - use --all to move all skills without selection.
     Use with caution - this permanently deletes skills from the source location.
 
     \b
     Examples:
-        skillboard move -i claude -o agent                    # global -> global
+        skillboard move -i claude -o agent                    # Interactive select
+        skillboard move -i claude -o agent --all              # Move all
         skillboard move -i claude --input-scope local -o agent # local -> global
         skillboard move -i claude -o agent --output-scope local # global -> local
         skillboard move -i claude -o agent --dry-run          # Preview what would move
     """
+    from .tui import select_skills_interactive
+
     config = get_config()
 
     # Resolve source
@@ -606,62 +660,47 @@ def move(
         console.print(f"[yellow]No skills found in {source_path}[/yellow]")
         return
 
-    # Check for conflicts
-    conflicts = []
-    to_move = []
+    # Select skills interactively unless --all is specified
+    if all:
+        selected_skills = {skill.name for skill in skills}
+        console.print(f"[dim]Moving all {len(selected_skills)} skills...[/dim]\n")
+    else:
+        selected = select_skills_interactive(
+            skills,
+            source_path,
+            target_path,
+            operation="move",
+        )
+        if selected is None:
+            return
+        selected_skills = selected
+        if not selected_skills:
+            console.print("\n[yellow]No skills selected.[/yellow]")
+            return
 
-    for skill in skills:
-        dest = target_path / skill.name
-        if dest.exists():
-            # Check if content is identical
-            if are_skills_identical(skill.path, dest):
-                # Same content, will skip
-                conflicts.append((skill.name, "identical"))
-            else:
-                # Different content - real conflict
-                conflicts.append((skill.name, "different"))
-        else:
-            to_move.append(skill)
-
-    # Show summary
-    console.print(f"\n[bold]Move Summary:[/bold] {source_path} → {target_path}")
-    console.print(f"  Total skills in source: {len(skills)}")
-    console.print(f"  Ready to move: {len(to_move)}")
-
-    if conflicts:
-        identical_count = sum(1 for _, status in conflicts if status == "identical")
-        different_count = sum(1 for _, status in conflicts if status == "different")
-        if identical_count:
-            console.print(f"  Already exists (identical): {identical_count}")
-        if different_count:
-            console.print(f"  [yellow]Conflicts (different content): {different_count}[/yellow]")
-
-    # Show what will be moved
-    if to_move:
-        console.print("\n[cyan]Skills to move:[/cyan]")
-        for skill in to_move:
-            console.print(f"  • {skill.name}")
-
-    if not to_move:
-        console.print("\n[dim]No skills to move.[/dim]")
-        return
-
+    # Dry run check
     if dry_run:
-        console.print("\n[dim]--dry-run specified, no changes made.[/dim]")
+        console.print(f"\n[bold]Dry Run - Would move:[/bold]")
+        for skill_name in selected_skills:
+            console.print(f"  • {skill_name}")
+        console.print("\n[dim]No changes made.[/dim]")
         return
 
     # Safety confirmation
     console.print(
         f"\n[yellow]⚠️  Warning: This will PERMANENTLY DELETE skills from {source_path}[/yellow]"
     )
-    confirm_msg = f"Move {len(to_move)} skill(s)?"
 
     try:
         import inquirer
 
-        confirm_question = [inquirer.Confirm("confirm", message=confirm_msg, default=False)]
-        confirm_answer = inquirer.prompt(confirm_question)
-        if not confirm_answer or not confirm_answer["confirm"]:
+        confirm_q = [
+            inquirer.Confirm(
+                "confirm", message=f"Move {len(selected_skills)} skill(s)?", default=False
+            )
+        ]
+        confirm_a = inquirer.prompt(confirm_q)
+        if not confirm_a or not confirm_a["confirm"]:
             console.print("\n[yellow]Cancelled.[/yellow]")
             return
     except (KeyboardInterrupt, ImportError):
@@ -675,7 +714,10 @@ def move(
 
     console.print("\n[bold]Moving skills...[/bold]\n")
 
-    for skill in to_move:
+    for skill in skills:
+        if skill.name not in selected_skills:
+            continue
+
         dest = target_path / skill.name
 
         # Handle existing files
