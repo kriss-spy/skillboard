@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from rich.console import Console
 
-console = Console()
+console: Console = Console()
 
 
 def select_skills_interactive(

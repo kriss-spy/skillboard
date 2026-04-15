@@ -10,7 +10,7 @@ from typing import NoReturn
 
 from rich.console import Console
 
-console = Console()
+console: Console = Console()
 
 
 class ExitCode(IntEnum):

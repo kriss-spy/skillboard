@@ -31,7 +31,7 @@ from .paths import (
 )
 from .tui import run_skill_tui
 
-console = Console()
+console: Console = Console()
 
 
 # Enable -h as well as --help
