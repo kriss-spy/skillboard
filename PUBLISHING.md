@@ -139,20 +139,23 @@ The CI workflow will automatically:
 #### Option B: Manual
 
 ```bash
-# Install build tools
-pip install build twine
-
-# Build package
-python -m build
-
-# Check package
-twine check dist/*
-
-# Upload to PyPI
-twine upload dist/*
+# Using pipx (recommended)
+pipx run build
+pipx run twine check dist/*
+pipx run twine upload dist/*
 
 # Username: __token__
 # Password: <your-pypi-api-token>
+
+# OR using a virtual environment
+python -m venv .venv-build
+source .venv-build/bin/activate
+pip install build twine
+python -m build
+twine check dist/*
+twine upload dist/*
+deactivate
+rm -rf .venv-build
 ```
 
 ---

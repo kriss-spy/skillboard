@@ -10,7 +10,7 @@ echo ""
 echo "Checking prerequisites..."
 command -v git >/dev/null 2>&1 || { echo "❌ git is required but not installed."; exit 1; }
 command -v python >/dev/null 2>&1 || { echo "❌ python is required but not installed."; exit 1; }
-command -v pip >/dev/null 2>&1 || { echo "❌ pip is required but not installed."; exit 1; }
+command -v pipx >/dev/null 2>&1 || { echo "❌ pipx is required but not installed. Run: pip install pipx"; exit 1; }
 
 echo "✓ All prerequisites met"
 echo ""
@@ -45,14 +45,19 @@ echo ""
 
 # Build package
 echo "📦 Building package..."
+# Create temp venv for building
+python -m venv .venv-build
+source .venv-build/bin/activate
 pip install build twine -q
 python -m build
+deactivate
+rm -rf .venv-build
 echo "✓ Package built"
 echo ""
 
 # Check package
 echo "🔍 Checking package..."
-twine check dist/*
+pipx run twine check dist/*
 echo "✓ Package check passed"
 echo ""
 
@@ -85,7 +90,7 @@ echo "   Name: PYPI_API_TOKEN"
 echo "   Value: <your-pypi-token>"
 echo ""
 echo "6. Publish manually (optional):"
-echo "   python -m twine upload dist/*"
+echo "   pipx run twine upload dist/*"
 echo "   Username: __token__"
 echo "   Password: <your-pypi-token>"
 echo ""
