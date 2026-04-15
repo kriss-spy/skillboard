@@ -193,7 +193,7 @@ def list(agent: Optional[str]) -> None:
         agent_lower = agent.lower()
         if agent_lower in config.paths.list_paths():
             agent_path = config.paths.get_path(agent_lower)
-            local_path = Path(f"./{agent_lower}/skills")
+            local_path = Path(f"./.{agent_lower}/skills")
             _list_skills_from_locations(f"{agent.capitalize()} Skills", agent_path, local_path)
         else:
             console.print(f"[red]Unknown agent: {agent}[/red]")
