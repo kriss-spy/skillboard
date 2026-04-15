@@ -56,7 +56,10 @@ This creates the default skill directories:
 ### 2. List available skills
 
 ```bash
-skillboard list  # Show all skills in warehouse
+skillboard list              # Show all .agent skills (global + local)
+skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
+skillboard list agent        # Show agent skills (~/.agent/skills + ./agent/skills)
+skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
 ### 3. List configured paths
@@ -94,13 +97,18 @@ skillboard init
 ```
 
 ### `list`
-List available skills in the warehouse.
+List available skills from both global and local locations.
 
 ```bash
-skillboard list  # Show all warehouse skills
+skillboard list              # Show .agent skills (~/.agent/skills + ./.agent/skills)
+skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
+skillboard list agent        # Show agent skills (~/.agent/skills + ./agent/skills)
+skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
-Shows skills from the warehouse directory (`~/.agent/skill-warehouse`).
+Shows skills from:
+- **Global**: The agent's directory in home (e.g., `~/.claude/skills`)
+- **Local**: The agent's directory in current project (e.g., `./claude/skills`)
 
 ### `list-path`
 Show all configured skill paths and their existence status.

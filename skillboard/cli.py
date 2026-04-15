@@ -170,39 +170,72 @@ def list_path() -> None:
 
 
 @cli.command()
-def list() -> None:
-    """List available skills in the warehouse.
+@click.argument("agent", required=False)
+def list(agent: Optional[str]) -> None:
+    """List available skills.
 
-    Shows all skills from the warehouse directory (source of truth).
+    Shows skills from both global and local locations.
 
     \b
-    Example:
-        skillboard list  # Show all warehouse skills
+    Examples:
+        skillboard list           # Show all .agent skills (global + local)
+        skillboard list claude    # Show Claude skills (~/.claude/skills + ./claude/skills)
+        skillboard list agent     # Show agent skills (~/.agent/skills + ./agent/skills)
+        skillboard list gemini    # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
     """
     config = get_config()
-    warehouse_path = config.paths.warehouse
 
-    if warehouse_path.exists():
-        manager = SkillManager(warehouse_path, warehouse_path)
-        skills = manager.get_source_skills()
-
-        console.print(f"\n[bold]Available Skills (from {warehouse_path}):[/bold]")
-        if skills:
-            table = Table()
-            table.add_column("Name", style="green")
-            table.add_column("Location", style="cyan")
-
-            for skill in skills:
-                table.add_row(skill.name, str(skill.path))
-
-            console.print(table)
-            console.print(f"[dim]Total: {len(skills)} skills[/dim]")
-        else:
-            console.print("[dim]No skills found in warehouse.[/dim]")
-        console.print()  # Empty line at end
+    if agent is None:
+        # Default: show .agent skills (warehouse + local)
+        _list_skills_from_locations("Agent Skills", config.paths.warehouse, Path(".agent/skills"))
     else:
-        console.print(f"\n[yellow]Warehouse not initialized: {warehouse_path}[/yellow]")
-        console.print("Run: skillboard init")
+        # Show skills for specific agent
+        agent_lower = agent.lower()
+        if agent_lower in config.paths.list_paths():
+            agent_path = config.paths.get_path(agent_lower)
+            local_path = Path(f"./{agent_lower}/skills")
+            _list_skills_from_locations(f"{agent.capitalize()} Skills", agent_path, local_path)
+        else:
+            console.print(f"[red]Unknown agent: {agent}[/red]")
+            console.print(f"Available: {', '.join(config.paths.list_paths().keys())}")
+
+
+def _list_skills_from_locations(title: str, global_path: Path, local_path: Path) -> None:
+    """Helper to list skills from global and local paths."""
+    console.print(f"\n[bold]{title}:[/bold]")
+
+    total_skills = 0
+
+    # Global skills
+    if global_path.exists():
+        manager = SkillManager(global_path, global_path)
+        skills = manager.get_source_skills()
+        if skills:
+            console.print(f"\n  [cyan]Global ({global_path}):[/cyan]")
+            for skill in skills:
+                console.print(f"    ✓ {skill.name}")
+            total_skills += len(skills)
+        else:
+            console.print(f"\n  [dim]Global ({global_path}): None[/dim]")
+    else:
+        console.print(f"\n  [dim]Global ({global_path}): Not initialized[/dim]")
+
+    # Local skills
+    if local_path.exists() and local_path.is_dir():
+        manager = SkillManager(local_path, local_path)
+        skills = manager.get_source_skills()
+        if skills:
+            console.print(f"\n  [cyan]Local ({local_path}):[/cyan]")
+            for skill in skills:
+                console.print(f"    ✓ {skill.name}")
+            total_skills += len(skills)
+        else:
+            console.print(f"\n  [dim]Local ({local_path}): None[/dim]")
+    else:
+        console.print(f"\n  [dim]Local ({local_path}): Not found[/dim]")
+
+    console.print(f"\n[dim]Total: {total_skills} skills[/dim]")
+    console.print()
 
 
 @cli.command()
