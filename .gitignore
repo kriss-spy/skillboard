@@ -74,6 +74,9 @@ test_warehouse/
 test_target/
 test_source/
 
+# Build venv
+.venv-build/
+
 # Type checking
 .mypy_cache/
 .dmypy.json
