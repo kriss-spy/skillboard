@@ -327,6 +327,14 @@ class SkillManager:
         if target_skill.exists():
             if not force:
                 if are_skills_identical(source_skill, target_skill):
+                    # Skills are identical - if source is a symlink, just remove it
+                    # since it points to the same content already in target
+                    if source_skill.is_symlink():
+                        try:
+                            source_skill.unlink()
+                            return True, "unlinked"
+                        except Exception as e:
+                            return False, f"Error removing symlink: {e}"
                     return True, "identical"
                 return False, "conflict"
 

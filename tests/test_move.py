@@ -134,3 +134,30 @@ class TestMoveSkill:
         assert message == "moved"
         assert not source_skill.exists()
         assert (target / "test-skill").exists()
+
+    def test_move_symlink_identical_unlinks(self, tmp_path):
+        """Test moving a symlink when target has identical content removes the symlink."""
+        source = tmp_path / "source"
+        target = tmp_path / "target"
+        source.mkdir()
+        target.mkdir()
+
+        # Create skill in target
+        target_skill = target / "test-skill"
+        target_skill.mkdir()
+        (target_skill / "file.txt").write_text("same content")
+
+        # Create symlink in source pointing to target
+        source_skill = source / "test-skill"
+        source_skill.symlink_to(target_skill)
+
+        manager = SkillManager(source, target)
+        success, message = manager.move_skill("test-skill")
+
+        # Should succeed and remove the symlink
+        assert success is True
+        assert message == "unlinked"
+        # Symlink should be removed from source
+        assert not source_skill.exists()
+        # Target should still exist
+        assert (target / "test-skill").exists()

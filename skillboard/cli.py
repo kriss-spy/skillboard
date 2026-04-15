@@ -627,6 +627,9 @@ def move(
             if message == "identical":
                 console.print(f"[dim]⏭ Skipping (identical): {skill.name}[/dim]")
                 skipped += 1
+            elif message == "unlinked":
+                console.print(f"[green]✓ Unlinked:[/green] {skill.name}")
+                moved += 1
             else:
                 console.print(f"[green]✓ Moved:[/green] {skill.name}")
                 moved += 1
