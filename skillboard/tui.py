@@ -66,7 +66,7 @@ def run_skill_tui(source_path: Path, target_path: Path) -> None:
     questions = [
         inquirer.Checkbox(
             "selected",
-            message="Select skills to enable (space to toggle, enter to confirm)",
+            message="Select skills (space: toggle, enter: confirm)",
             choices=[skill.name for skill in skills],
             default=list(currently_enabled),
         ),
