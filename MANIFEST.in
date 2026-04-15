@@ -1,0 +1,22 @@
+# Include important files
+include LICENSE
+include README.md
+include CONTRIBUTING.md
+
+# Exclude development files
+exclude .gitignore
+exclude .python-version
+
+# Exclude directories
+recursive-exclude .github *
+recursive-exclude .git *
+recursive-exclude .venv *
+recursive-exclude venv *
+recursive-exclude __pycache__ *
+recursive-exclude *.egg-info *
+recursive-exclude .pytest_cache *
+recursive-exclude .ruff_cache *
+recursive-exclude .mypy_cache *
+recursive-exclude htmlcov *
+recursive-exclude dist *
+recursive-exclude build *
