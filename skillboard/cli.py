@@ -321,31 +321,77 @@ def init() -> None:
 
 
 @cli.command()
-@click.argument("source")
-@click.argument("target")
-def copy(source: str, target: str) -> None:
+@click.option(
+    "-i",
+    "--input",
+    "input_path",
+    type=str,
+    help="Source agent (claude, agent, gemini, opencode, antigravity, warehouse).",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=str,
+    help="Target agent (claude, agent, gemini, opencode, antigravity).",
+)
+@click.option(
+    "--input-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for input: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--output-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for output: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+def copy(
+    input_path: Optional[str],
+    output_path: Optional[str],
+    input_scope: str,
+    output_scope: str,
+) -> None:
     """Copy skills from source to target (not symlink).
 
-    Unlike sync, this creates actual copies of the skill directories
-    instead of symbolic links.
+    Unlike sync, this creates actual copies of the skill directories.
 
     \b
-    Example:
-        skillboard copy warehouse claude
-        skillboard copy ~/.agent/skills ~/.claude/skills
+    Examples:
+        skillboard copy -i claude -o agent                    # global -> global
+        skillboard copy -i claude --input-scope local -o agent # local -> global
+        skillboard copy -i claude -o agent --output-scope local # global -> local
     """
     config = get_config()
 
-    # Resolve paths
-    if source in config.paths.list_paths():
-        source_path = config.paths.get_path(source)
-    else:
-        source_path = Path(source).expanduser()
+    # Resolve source
+    if input_path is None:
+        console.print("[red]Error: Source is required. Use -i/--input option.[/red]")
+        sys.exit(1)
 
-    if target in config.paths.list_paths():
-        target_path = config.paths.get_path(target)
+    source_agent = input_path.lower()
+    if source_agent in config.paths.list_paths():
+        if input_scope == "local":
+            source_path = Path(f"./.{source_agent}/skills")
+        else:
+            source_path = config.paths.get_path(source_agent)
     else:
-        target_path = Path(target).expanduser()
+        source_path = Path(input_path).expanduser()
+
+    # Resolve target
+    if output_path is None:
+        console.print("[red]Error: Target is required. Use -o/--output option.[/red]")
+        sys.exit(1)
+
+    target_agent = output_path.lower()
+    if target_agent in config.paths.list_paths():
+        if output_scope == "local":
+            target_path = Path(f"./.{target_agent}/skills")
+        else:
+            target_path = config.paths.get_path(target_agent)
+    else:
+        target_path = Path(output_path).expanduser()
 
     if not source_path.exists():
         console.print(f"[red]Error: Source does not exist: {source_path}[/red]")
