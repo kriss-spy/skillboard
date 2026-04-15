@@ -14,6 +14,8 @@ A lightweight skill management utility for AI coding agents. Toggle skills on/of
 - ⚡ **Fast Operations** - Quickly toggle skills with keyboard shortcuts
 - 🎨 **Beautiful Output** - Rich terminal tables and colored output
 - 🔧 **Configurable Paths** - Customize skill directories via config file
+- 📋 **Copy & Move** - Copy or move skills between directories
+- 👁️ **Read Skills** - View skill content without opening an editor
 
 ## Installation
 
@@ -57,110 +59,210 @@ This creates the default skill directories:
 
 ```bash
 skillboard list              # Show all .agents skills (global + local)
-skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
+skillboard list claude       # Show Claude skills (~/.claude/skills + ./.claude/skills)
 skillboard list agent        # Show agent skills (~/.agents/skills + ./agents/skills)
 skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
-### 3. List configured paths
+### 3. Link skills interactively
 
 ```bash
-skillboard list-path
-```
-
-### 3. Sync skills interactively
-
-```bash
-# Sync from warehouse to Claude Code
-skillboard sync -o claude
+# Link from warehouse to Claude Code (interactive selection)
+skillboard link -o claude
 
 # Or specify source explicitly
-skillboard sync -i warehouse -o claude
+skillboard link -i warehouse -o claude
 
 # Using paths directly
-skillboard sync -i ~/.agent/skill-warehouse -o ~/.claude/skills
+skillboard link -i ~/.agents/skill-warehouse -o ~/.claude/skills
+
+# Non-interactive mode (just list skills)
+skillboard link -o claude --no-tui
 ```
 
-### 4. List skills without interactive mode
+### 4. Copy or move skills
 
 ```bash
-skillboard sync -o claude --no-tui
+# Copy skills from warehouse to agent (interactive selection)
+skillboard copy -i warehouse -o agent
+
+# Copy all skills without selection
+skillboard copy -i warehouse -o agent --all
+
+# Move skills (copy + delete from source)
+skillboard move -i warehouse -o agent
+
+# Preview what would be moved
+skillboard move -i warehouse -o agent --dry-run
 ```
 
 ## Commands
 
 ### `init`
+
 Initialize skillboard configuration and create default directories.
 
 ```bash
 skillboard init
+
+# Migrate old .agent paths to .agents (v0.2.0 to v0.3.0+)
+skillboard init --migrate
 ```
 
 ### `list`
+
 List available skills from both global and local locations.
 
 ```bash
 skillboard list              # Show .agents skills (~/.agents/skills + ./.agents/skills)
-skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
+skillboard list claude       # Show Claude skills (~/.claude/skills + ./.claude/skills)
 skillboard list agent        # Show agent skills (~/.agents/skills + ./agents/skills)
 skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
 Shows skills from:
 - **Global**: The agent's directory in home (e.g., `~/.claude/skills`)
-- **Local**: The agent's directory in current project (e.g., `./claude/skills`)
+- **Local**: The agent's directory in current project (e.g., `./.claude/skills`)
 
 ### `list-path`
+
 Show all configured skill paths and their existence status.
 
 ```bash
 skillboard list-path
 ```
 
-### `sync`
-Sync skills between source and target directory.
+### `link`
+
+Create symbolic links to skills in the target directory. This is the primary command for enabling/disabling skills.
 
 **Interactive mode (default):**
 ```bash
-# Sync from global skills (default)
-skillboard sync -o claude
-skillboard sync -o claude -g
+# Link from global skills (default)
+skillboard link -o claude
 
-# Sync from local skills
-skillboard sync -o claude -l
+# Link from warehouse to agent
+skillboard link -i warehouse -o agent
 
-# Sync to different agents
-skillboard sync -o agent
-skillboard sync -o gemini
-skillboard sync -o opencode
+# Link from local skills
+skillboard link -i agent --input-scope local -o claude
+
+# Link from local to local
+skillboard link -i agent --input-scope local -o claude --output-scope local
 ```
 
-**List-only mode:**
+**Non-interactive mode:**
 ```bash
-skillboard sync -o claude --no-tui
+skillboard link -o claude --no-tui
 ```
 
 **Options:**
-- `-o, --output`: Target directory (required) - agent, claude, gemini, opencode, antigravity
-- `-g, --global`: Use global skills from ~/.agents/skills (default)
-- `-l, --local`: Use local skills from ./.agents/skills
-- `-i, --input`: Explicit source directory (overrides -g/-l)
+- `-i, --input`: Source agent or path
+- `-o, --output`: Target agent or path (required)
+- `--input-scope`: `global` or `local` for input
+- `--output-scope`: `global` or `local` for output
+- `--all`: Include both global and local sources
 - `--no-tui`: Run in list-only mode
+- `--verbose`: Show full table instead of summary
 
-**Available aliases:**
+### `copy`
+
+Copy skills from source to target (creates actual copies, not symlinks).
+
+**Interactive mode (default):**
+```bash
+# Copy from warehouse to agent (interactive selection)
+skillboard copy -i warehouse -o agent
+
+# Copy from claude to agent
+skillboard copy -i claude -o agent
+
+# Copy from local source
+skillboard copy -i agent --input-scope local -o warehouse
+```
+
+**Copy all without selection:**
+```bash
+skillboard copy -i warehouse -o agent --all
+```
+
+**Options:**
+- `-i, --input`: Source agent or path (required)
+- `-o, --output`: Target agent or path (required)
+- `--input-scope`: `global` or `local` for input
+- `--output-scope`: `global` or `local` for output
+- `--all`: Copy all skills without interactive selection
+
+### `move`
+
+Move skills from source to target (copy + delete from source). **Use with caution** - this permanently deletes skills from the source location.
+
+**Interactive mode (default):**
+```bash
+# Move from warehouse to agent (interactive selection)
+skillboard move -i warehouse -o agent
+
+# Move from claude to agent
+skillboard move -i claude -o agent
+```
+
+**Move all without selection:**
+```bash
+skillboard move -i warehouse -o agent --all
+```
+
+**Preview before moving:**
+```bash
+skillboard move -i warehouse -o agent --dry-run
+```
+
+**Force overwrite existing skills:**
+```bash
+skillboard move -i warehouse -o agent --force
+```
+
+**Options:**
+- `-i, --input`: Source agent or path (required)
+- `-o, --output`: Target agent or path (required)
+- `--input-scope`: `global` or `local` for input
+- `--output-scope`: `global` or `local` for output
+- `--all`: Move all skills without interactive selection
+- `--dry-run`: Show what would be moved without actually moving
+- `--force`: Overwrite existing skills in target without prompting
+
+### `read`
+
+Display skill content for quick reference without opening an editor.
+
+```bash
+# Read skill from default agent location
+skillboard read my-skill
+
+# Read skill from specific agent
+skillboard read my-skill -a claude
+
+# Read from local scope
+skillboard read my-skill -a agent --scope local
+
+# Read from .github/skills
+skillboard read my-skill --github
+```
+
+**Options:**
+- `-a, --agent`: Agent to read from (claude, agent, gemini, opencode, antigravity)
+- `--scope`: `global` or `local`
+- `--github`: Read from `.github/skills` directory
+
+## Available Aliases
+
+The following aliases can be used with `-i` and `-o` options:
+
 - `warehouse`: `~/.agents/skill-warehouse`
 - `agent`: `~/.agents/skills`
 - `claude`: `~/.claude/skills`
 - `opencode`: `~/.config/opencode/skills`
 - `gemini`: `~/.gemini/skills`
 - `antigravity`: `~/.gemini/antigravity/skills`
-
-### `copy`
-Copy skills from source to target (creates actual copies, not symlinks).
-
-```bash
-skillboard copy warehouse claude
-```
 
 ## How It Works
 
@@ -216,6 +318,9 @@ pytest
 # Format code
 black skillboard/
 ruff check --fix skillboard/
+
+# Type check
+mypy skillboard/
 ```
 
 ## Project Structure
