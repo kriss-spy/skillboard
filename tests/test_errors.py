@@ -1,8 +1,5 @@
 """Tests for error handling module."""
 
-import sys
-from io import StringIO
-
 import pytest
 
 from skillboard.errors import ExitCode, cancel, error, info, success, warning

@@ -11,7 +11,6 @@ Provides commands for:
 """
 
 import shutil
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -21,7 +20,7 @@ from rich.table import Table
 
 from . import __version__
 from .config import get_config
-from .manager import SkillManager, are_skills_identical
+from .manager import SkillManager
 from .paths import (
     ensure_target_directory,
     resolve_link_source,

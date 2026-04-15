@@ -327,8 +327,8 @@ class SkillManager:
         if target_skill.exists():
             if not force:
                 if are_skills_identical(source_skill, target_skill):
-                    return True, f"identical"
-                return False, f"conflict"
+                    return True, "identical"
+                return False, "conflict"
 
             # Force: remove existing target
             try:
@@ -358,7 +358,7 @@ class SkillManager:
                     target_skill.unlink()
                 else:
                     shutil.rmtree(target_skill)
-            except:
+            except Exception:
                 pass  # Best effort rollback
             return False, f"Error deleting from source (rolled back): {e}"
 
