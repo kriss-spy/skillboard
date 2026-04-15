@@ -70,29 +70,63 @@ def cli(ctx: click.Context) -> None:
         "agent, claude, opencode, gemini, antigravity"
     ),
 )
+@click.option(
+    "-g",
+    "--global",
+    "use_global",
+    is_flag=True,
+    help="Use global skills from ~/.agent/skills.",
+)
+@click.option(
+    "-l",
+    "--local",
+    "use_local",
+    is_flag=True,
+    help="Use local skills from ./.agent/skills.",
+)
 @click.option("--no-tui", is_flag=True, help="Run in non-TUI mode (list skills only).")
-def sync(input_path: Optional[str], output_path: Optional[str], no_tui: bool) -> None:
-    """Sync skills between warehouse and target directory.
+def sync(
+    input_path: Optional[str],
+    output_path: Optional[str],
+    use_global: bool,
+    use_local: bool,
+    no_tui: bool,
+) -> None:
+    """Sync skills between source and target directory.
 
     In interactive mode (default), shows a checkbox interface to select
     which skills to enable. In --no-tui mode, just lists current skills.
 
+    By default uses global skills. Use -l/--local to use local skills.
+
     \b
     Examples:
+        skillboard sync -o claude           # Uses global skills (default)
+        skillboard sync -o claude -g        # Explicitly use global skills
+        skillboard sync -o claude -l        # Use local skills from ./.agent/skills
         skillboard sync -i warehouse -o claude
-        skillboard sync -i ~/.agent/skill-warehouse -o ~/.claude/skills
-        skillboard sync -o claude  # Uses warehouse as default source
         skillboard sync -o claude --no-tui
     """
     config = get_config()
 
+    # Determine source based on flags
+    if use_local and use_global:
+        console.print("[red]Error: Cannot use both --global and --local flags.[/red]")
+        sys.exit(1)
+
     # Resolve input path
-    if input_path is None:
-        source = config.paths.warehouse
-    elif input_path in config.paths.list_paths():
-        source = config.paths.get_path(input_path)
+    if input_path is not None:
+        # Explicit input path provided
+        if input_path in config.paths.list_paths():
+            source = config.paths.get_path(input_path)
+        else:
+            source = Path(input_path).expanduser()
+    elif use_local:
+        # Use local skills
+        source = Path(".agent/skills")
     else:
-        source = Path(input_path).expanduser()
+        # Default: use global agent skills
+        source = config.paths.agent
 
     # Resolve output path
     if output_path is None:

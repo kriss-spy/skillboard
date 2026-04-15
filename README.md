@@ -118,17 +118,22 @@ skillboard list-path
 ```
 
 ### `sync`
-Sync skills between warehouse and target directory.
+Sync skills between source and target directory.
 
 **Interactive mode (default):**
 ```bash
+# Sync from global skills (default)
 skillboard sync -o claude
-```
+skillboard sync -o claude -g
 
-Shows a checkbox interface:
-- **Space**: Toggle skill on/off
-- **Enter**: Confirm selection
-- Shows preview of changes before applying
+# Sync from local skills
+skillboard sync -o claude -l
+
+# Sync to different agents
+skillboard sync -o agent
+skillboard sync -o gemini
+skillboard sync -o opencode
+```
 
 **List-only mode:**
 ```bash
@@ -136,8 +141,10 @@ skillboard sync -o claude --no-tui
 ```
 
 **Options:**
-- `-i, --input`: Source directory (default: warehouse)
-- `-o, --output`: Target directory (required)
+- `-o, --output`: Target directory (required) - agent, claude, gemini, opencode, antigravity
+- `-g, --global`: Use global skills from ~/.agent/skills (default)
+- `-l, --local`: Use local skills from ./.agent/skills
+- `-i, --input`: Explicit source directory (overrides -g/-l)
 - `--no-tui`: Run in list-only mode
 
 **Available aliases:**
