@@ -327,13 +327,46 @@ def _list_skills_from_locations(title: str, global_path: Path, local_path: Path)
 
 
 @cli.command()
-def init() -> None:
+@click.option(
+    "--migrate",
+    is_flag=True,
+    help="Migrate old .agent paths to .agents (v0.2.0 to v0.3.0)",
+)
+def init(migrate: bool) -> None:
     """Initialize skillboard configuration and directories.
 
     Creates the warehouse directory and any missing agent directories.
     Also saves the configuration file.
+
+    Use --migrate to update old .agent paths to .agents (breaking change in v0.3.0).
     """
+    from skillboard.config import SkillPaths
+
     config = get_config()
+
+    # Check for old .agent paths that need migration
+    migrated = []
+    if migrate:
+        console.print("[bold]Migrating paths from .agent to .agents...[/bold]\n")
+
+        # Create new SkillPaths to get the correct defaults
+        correct_paths = SkillPaths()
+
+        # Check each path and migrate if needed
+        for name in ["warehouse", "agent"]:
+            old_path = getattr(config.paths, name)
+            new_path = getattr(correct_paths, name)
+
+            if ".agent/" in str(old_path) and ".agents/" in str(new_path):
+                # Update the path
+                setattr(config.paths, name, new_path)
+                migrated.append((name, old_path, new_path))
+                console.print(f"[yellow]✓ Migrated:[/yellow] {name}")
+                console.print(f"    From: {old_path}")
+                console.print(f"    To:   {new_path}")
+
+        if migrated:
+            console.print()
 
     console.print("[bold]Initializing skillboard...[/bold]\n")
 
@@ -351,7 +384,12 @@ def init() -> None:
 
     console.print(f"\n[bold]Configuration saved to:[/bold] {config.CONFIG_FILE}")
 
-    if paths_created:
+    if migrated:
+        console.print(f"\n[yellow]Migrated {len(migrated)} path(s) from .agent to .agents[/yellow]")
+        console.print(
+            "[dim]Old directories still exist. You can manually move skills if needed.[/dim]"
+        )
+    elif paths_created:
         console.print(f"\n[green]Created {len(paths_created)} new directories.[/green]")
     else:
         console.print("\n[dim]All directories already exist.[/dim]")
