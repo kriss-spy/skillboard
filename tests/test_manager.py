@@ -1,9 +1,11 @@
 """Tests for skillboard."""
 
-import pytest
 from pathlib import Path
-from skillboard.manager import SkillManager, Skill
+
+import pytest
+
 from skillboard.config import Config, SkillPaths, get_config, reset_config
+from skillboard.manager import Skill, SkillManager
 
 
 class TestSkill:
