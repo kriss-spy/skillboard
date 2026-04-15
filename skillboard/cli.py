@@ -601,7 +601,7 @@ def move(
         console.print("\n[yellow]Cancelled.[/yellow]")
         return
 
-    # Perform the move
+    # Perform the move using atomic move with rollback
     moved = 0
     skipped = 0
     errors = 0
@@ -612,52 +612,22 @@ def move(
         if skill.name not in selected_skills:
             continue
 
-        dest = target_path / skill.name
+        success, message = manager.move_skill(skill.name, force=force)
 
-        # Handle existing files
-        if dest.exists():
-            if are_skills_identical(skill.path, dest):
+        if success:
+            if message == "identical":
                 console.print(f"[dim]⏭ Skipping (identical): {skill.name}[/dim]")
                 skipped += 1
-                continue
-            elif force:
-                # Remove existing and continue
-                try:
-                    if dest.is_symlink():
-                        dest.unlink()
-                    else:
-                        shutil.rmtree(dest)
-                except Exception as e:
-                    console.print(f"[red]✗ Error removing existing {skill.name}: {e}[/red]")
-                    errors += 1
-                    continue
             else:
+                console.print(f"[green]✓ Moved:[/green] {skill.name}")
+                moved += 1
+        else:
+            if message == "conflict":
                 console.print(f"[yellow]⚠ Skipped (conflict): {skill.name}[/yellow]")
                 skipped += 1
-                continue
-
-        # Copy to target
-        try:
-            shutil.copytree(skill.path, dest)
-        except Exception as e:
-            console.print(f"[red]✗ Error copying {skill.name}: {e}[/red]")
-            errors += 1
-            continue
-
-        # Delete from source
-        try:
-            if skill.path.is_symlink():
-                skill.path.unlink()
             else:
-                shutil.rmtree(skill.path)
-            console.print(f"[green]✓ Moved:[/green] {skill.name}")
-            moved += 1
-        except Exception as e:
-            console.print(f"[red]✗ Error deleting {skill.name} from source: {e}[/red]")
-            warning_msg = f"[yellow]  Warning: {skill.name} was copied to target"
-            warning_msg += " but not removed from source[/yellow]"
-            console.print(warning_msg)
-            errors += 1
+                console.print(f"[red]✗ Error with {skill.name}: {message}[/red]")
+                errors += 1
 
     console.print(f"\n[bold]Results:[/bold] {moved} moved, {skipped} skipped, {errors} errors")
 

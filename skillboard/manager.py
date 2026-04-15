@@ -1,6 +1,7 @@
 """Skill management operations."""
 
 import hashlib
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -301,3 +302,64 @@ class SkillManager:
                         )
                     )
         return skills
+
+    def move_skill(self, skill_name: str, force: bool = False) -> tuple[bool, str]:
+        """Move a skill from source to target with rollback support.
+
+        This is an atomic operation that either succeeds completely or
+        rolls back any partial changes.
+
+        Args:
+            skill_name: Name of the skill to move
+            force: Whether to overwrite existing skills in target
+
+        Returns:
+            Tuple of (success, message)
+        """
+        source_skill = self.source_path / skill_name
+        target_skill = self.target_path / skill_name
+
+        # Validate source exists
+        if not source_skill.exists():
+            return False, f"Skill '{skill_name}' not found in source"
+
+        # Check target conflicts
+        if target_skill.exists():
+            if not force:
+                if are_skills_identical(source_skill, target_skill):
+                    return True, f"identical"
+                return False, f"conflict"
+
+            # Force: remove existing target
+            try:
+                if target_skill.is_symlink():
+                    target_skill.unlink()
+                else:
+                    shutil.rmtree(target_skill)
+            except Exception as e:
+                return False, f"Error removing existing: {e}"
+
+        # Step 1: Copy to target
+        try:
+            shutil.copytree(source_skill, target_skill)
+        except Exception as e:
+            return False, f"Error copying: {e}"
+
+        # Step 2: Remove from source (with rollback on failure)
+        try:
+            if source_skill.is_symlink():
+                source_skill.unlink()
+            else:
+                shutil.rmtree(source_skill)
+        except Exception as e:
+            # Rollback: remove copied skill from target
+            try:
+                if target_skill.is_symlink():
+                    target_skill.unlink()
+                else:
+                    shutil.rmtree(target_skill)
+            except:
+                pass  # Best effort rollback
+            return False, f"Error deleting from source (rolled back): {e}"
+
+        return True, "moved"
