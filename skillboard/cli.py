@@ -6,8 +6,10 @@ Provides commands for:
 - list-path: Show configured skill paths
 - init: Initialize directories
 - copy: Copy skills (not symlink)
+- move: Move skills between locations
 """
 
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -18,7 +20,7 @@ from rich.table import Table
 
 from . import __version__
 from .config import get_config
-from .manager import SkillManager
+from .manager import SkillManager, are_skills_identical
 from .tui import run_skill_tui
 
 console = Console()
@@ -207,7 +209,7 @@ def sync(
             console.print(f"  Enabled:   {enabled_count} skills")
             console.print(f"  Available: {available_count} skills")
 
-        console.print(f"\n[dim]Use --verbose to see full skill list[/dim]")
+        console.print("\n[dim]Use --verbose to see full skill list[/dim]")
     else:
         # Interactive TUI mode
         run_skill_tui(source, target)
@@ -516,9 +518,6 @@ def move(
         skillboard move -i claude -o agent --output-scope local # global -> local
         skillboard move -i claude -o agent --dry-run          # Preview what would move
     """
-    import shutil
-    from skillboard.manager import are_skills_identical
-
     config = get_config()
 
     # Resolve source
@@ -594,7 +593,7 @@ def move(
 
     # Show what will be moved
     if to_move:
-        console.print(f"\n[cyan]Skills to move:[/cyan]")
+        console.print("\n[cyan]Skills to move:[/cyan]")
         for skill in to_move:
             console.print(f"  • {skill.name}")
 
@@ -629,7 +628,7 @@ def move(
     skipped = 0
     errors = 0
 
-    console.print(f"\n[bold]Moving skills...[/bold]\n")
+    console.print("\n[bold]Moving skills...[/bold]\n")
 
     for skill in to_move:
         dest = target_path / skill.name
@@ -674,9 +673,9 @@ def move(
             moved += 1
         except Exception as e:
             console.print(f"[red]✗ Error deleting {skill.name} from source: {e}[/red]")
-            console.print(
-                f"[yellow]  Warning: {skill.name} was copied to target but not removed from source[/yellow]"
-            )
+            warning_msg = f"[yellow]  Warning: {skill.name} was copied to target"
+            warning_msg += " but not removed from source[/yellow]"
+            console.print(warning_msg)
             errors += 1
 
     console.print(f"\n[bold]Results:[/bold] {moved} moved, {skipped} skipped, {errors} errors")

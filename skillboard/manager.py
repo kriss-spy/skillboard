@@ -37,7 +37,7 @@ def get_skill_content_hash(skill_path: Path) -> str:
                 with open(file_path, "rb") as f:
                     for chunk in iter(lambda: f.read(8192), b""):
                         sha256.update(chunk)
-            except (OSError, IOError):
+            except OSError:
                 # Skip files that can't be read
                 sha256.update(b"<unreadable>")
             sha256.update(b"\0")  # Separator
