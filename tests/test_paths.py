@@ -16,33 +16,26 @@ from skillboard.paths import (
 )
 
 
-class MockConfig:
-    """Mock config object for testing."""
-
-    def __init__(self):
-        self.paths = SkillPaths()
-
-
 class TestResolveAgentPath:
     """Tests for resolve_agent_path function."""
 
     def test_resolve_known_agent_global(self):
         """Test resolving a known agent with global scope."""
-        config = MockConfig()
-        result = resolve_agent_path("claude", "global", config)
-        assert result == config.paths.claude
+        paths = SkillPaths()
+        result = resolve_agent_path("claude", "global", paths)
+        assert result == paths.claude
 
     def test_resolve_known_agent_local(self):
         """Test resolving a known agent with local scope."""
-        config = MockConfig()
-        result = resolve_agent_path("claude", "local", config)
+        paths = SkillPaths()
+        result = resolve_agent_path("claude", "local", paths)
         assert result == Path("./.claude/skills")
 
     def test_resolve_unknown_agent(self):
         """Test resolving an unknown agent raises error."""
-        config = MockConfig()
+        paths = SkillPaths()
         with pytest.raises(SystemExit) as exc_info:
-            resolve_agent_path("unknown", "global", config)
+            resolve_agent_path("unknown", "global", paths)
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS
 
 
@@ -51,21 +44,21 @@ class TestResolveSourcePath:
 
     def test_resolve_with_none(self):
         """Test resolving None raises error."""
-        config = MockConfig()
+        paths = SkillPaths()
         with pytest.raises(SystemExit) as exc_info:
-            resolve_source_path(None, "global", config)
+            resolve_source_path(None, "global", paths)
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS
 
     def test_resolve_known_agent(self):
         """Test resolving a known agent name."""
-        config = MockConfig()
-        result = resolve_source_path("warehouse", "global", config)
-        assert result == config.paths.warehouse
+        paths = SkillPaths()
+        result = resolve_source_path("warehouse", "global", paths)
+        assert result == paths.warehouse
 
     def test_resolve_explicit_path(self):
         """Test resolving an explicit path."""
-        config = MockConfig()
-        result = resolve_source_path("/custom/path", "global", config)
+        paths = SkillPaths()
+        result = resolve_source_path("/custom/path", "global", paths)
         assert result == Path("/custom/path")
 
 
@@ -74,16 +67,16 @@ class TestResolveTargetPath:
 
     def test_resolve_with_none(self):
         """Test resolving None raises error."""
-        config = MockConfig()
+        paths = SkillPaths()
         with pytest.raises(SystemExit) as exc_info:
-            resolve_target_path(None, "global", config)
+            resolve_target_path(None, "global", paths)
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS
 
     def test_resolve_known_agent(self):
         """Test resolving a known agent name."""
-        config = MockConfig()
-        result = resolve_target_path("claude", "global", config)
-        assert result == config.paths.claude
+        paths = SkillPaths()
+        result = resolve_target_path("claude", "global", paths)
+        assert result == paths.claude
 
 
 class TestValidateSourceExists:
@@ -128,19 +121,19 @@ class TestResolveLinkSource:
 
     def test_default_agent(self):
         """Test defaulting to 'agent' when input is None."""
-        config = MockConfig()
-        result = resolve_link_source(None, "global", False, config)
-        assert result == config.paths.agent
+        paths = SkillPaths()
+        result = resolve_link_source(None, "global", False, paths)
+        assert result == paths.agent
 
     def test_link_all_global(self):
         """Test --all flag uses global path."""
-        config = MockConfig()
-        result = resolve_link_source("agent", "local", True, config)
-        assert result == config.paths.agent  # Should use global, not local
+        paths = SkillPaths()
+        result = resolve_link_source("agent", "local", True, paths)
+        assert result == paths.agent  # Should use global, not local
 
     def test_unknown_agent_with_link_all(self):
         """Test --all with unknown agent raises error."""
-        config = MockConfig()
+        paths = SkillPaths()
         with pytest.raises(SystemExit) as exc_info:
-            resolve_link_source("unknown", "global", True, config)
+            resolve_link_source("unknown", "global", True, paths)
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS

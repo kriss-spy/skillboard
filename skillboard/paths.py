@@ -6,20 +6,21 @@ Provides consistent path resolution across all CLI commands.
 from pathlib import Path
 from typing import Optional
 
+from .config import SkillPaths
 from .errors import ExitCode, error
 
 
 def resolve_agent_path(
     agent_name: str,
     scope: str,
-    config,
+    paths: SkillPaths,
 ) -> Path:
     """Resolve an agent name to an actual path.
 
     Args:
         agent_name: Name of the agent (claude, agent, gemini, etc.)
         scope: 'global' or 'local'
-        config: Config instance with path mappings
+        paths: SkillPaths instance with path mappings
 
     Returns:
         Resolved Path object
@@ -29,27 +30,27 @@ def resolve_agent_path(
     """
     agent_lower = agent_name.lower()
 
-    if agent_lower in config.paths.list_paths():
+    if agent_lower in paths.list_paths():
         if scope == "local":
             return Path(f"./.{agent_lower}/skills")
         else:
-            return config.paths.get_path(agent_lower)
+            return paths.get_path(agent_lower)
     else:
-        available = ", ".join(config.paths.list_paths().keys())
+        available = ", ".join(paths.list_paths().keys())
         error(f"Unknown agent '{agent_name}'. Available: {available}", ExitCode.INVALID_ARGUMENTS)
 
 
 def resolve_source_path(
     input_path: Optional[str],
     scope: str,
-    config,
+    paths: SkillPaths,
 ) -> Path:
     """Resolve source path from input string.
 
     Args:
         input_path: Agent name, alias, or explicit path
         scope: 'global' or 'local'
-        config: Config instance with path mappings
+        paths: SkillPaths instance with path mappings
 
     Returns:
         Resolved Path object
@@ -62,8 +63,8 @@ def resolve_source_path(
 
     # Check if it's an agent alias
     agent_lower = input_path.lower()
-    if agent_lower in config.paths.list_paths():
-        return resolve_agent_path(agent_lower, scope, config)
+    if agent_lower in paths.list_paths():
+        return resolve_agent_path(agent_lower, scope, paths)
 
     # Treat as explicit path
     return Path(input_path).expanduser()
@@ -72,14 +73,14 @@ def resolve_source_path(
 def resolve_target_path(
     output_path: Optional[str],
     scope: str,
-    config,
+    paths: SkillPaths,
 ) -> Path:
     """Resolve target path from output string.
 
     Args:
         output_path: Agent name, alias, or explicit path
         scope: 'global' or 'local'
-        config: Config instance with path mappings
+        paths: SkillPaths instance with path mappings
 
     Returns:
         Resolved Path object
@@ -92,8 +93,8 @@ def resolve_target_path(
 
     # Check if it's an agent alias
     agent_lower = output_path.lower()
-    if agent_lower in config.paths.list_paths():
-        return resolve_agent_path(agent_lower, scope, config)
+    if agent_lower in paths.list_paths():
+        return resolve_agent_path(agent_lower, scope, paths)
 
     # Treat as explicit path
     return Path(output_path).expanduser()
@@ -103,7 +104,7 @@ def resolve_link_source(
     input_path: Optional[str],
     input_scope: str,
     link_all: bool,
-    config,
+    paths: SkillPaths,
 ) -> Path:
     """Resolve source path specifically for the link command.
 
@@ -113,7 +114,7 @@ def resolve_link_source(
         input_path: Agent name or None (defaults to 'agent')
         input_scope: 'global' or 'local'
         link_all: Whether --all flag is set
-        config: Config instance
+        paths: SkillPaths instance
 
     Returns:
         Resolved source Path
@@ -126,13 +127,13 @@ def resolve_link_source(
 
     if link_all:
         # For --all, we use global path by default
-        if source_agent in config.paths.list_paths():
-            return config.paths.get_path(source_agent)
+        if source_agent in paths.list_paths():
+            return paths.get_path(source_agent)
         else:
             error(f"Unknown source agent: {source_agent}", ExitCode.INVALID_ARGUMENTS)
 
     # Single source
-    return resolve_source_path(input_path or source_agent, input_scope, config)
+    return resolve_source_path(input_path or source_agent, input_scope, paths)
 
 
 def validate_source_exists(path: Path) -> None:

@@ -123,8 +123,8 @@ def link(
     config = get_config()
 
     # Resolve source and target paths
-    source = resolve_link_source(input_path, input_scope, link_all, config)
-    target = resolve_target_path(output_path, output_scope, config)
+    source = resolve_link_source(input_path, input_scope, link_all, config.paths)
+    target = resolve_target_path(output_path, output_scope, config.paths)
     validate_source_exists(source)
     ensure_target_directory(target)
 
@@ -399,8 +399,8 @@ def copy(
     config = get_config()
 
     # Resolve source and target paths
-    source_path = resolve_source_path(input_path, input_scope, config)
-    target_path = resolve_target_path(output_path, output_scope, config)
+    source_path = resolve_source_path(input_path, input_scope, config.paths)
+    target_path = resolve_target_path(output_path, output_scope, config.paths)
     validate_source_exists(source_path)
     ensure_target_directory(target_path)
 
@@ -546,8 +546,8 @@ def move(
     config = get_config()
 
     # Resolve source and target paths
-    source_path = resolve_source_path(input_path, input_scope, config)
-    target_path = resolve_target_path(output_path, output_scope, config)
+    source_path = resolve_source_path(input_path, input_scope, config.paths)
+    target_path = resolve_target_path(output_path, output_scope, config.paths)
     validate_source_exists(source_path)
     ensure_target_directory(target_path)
 
