@@ -67,13 +67,21 @@ def select_skills_interactive(
     skill_names = [skill.name for skill in skills]
     choices = ["[Select All]"] + skill_names
 
+    # Determine default selection:
+    # - If preselected is explicitly provided (even if empty), use it
+    # - If preselected is None (not provided), default to empty (no selection)
+    if preselected is None:
+        default_selection = []
+    else:
+        default_selection = list(preselected)
+
     # Ask user to select skills
     questions = [
         inquirer.Checkbox(
             "selected",
             message=f"Select skills to {operation} (space: toggle, enter: confirm)",
             choices=choices,
-            default=["[Select All]"] if not preselected else list(preselected),
+            default=default_selection,
         ),
     ]
 
