@@ -70,7 +70,7 @@ class Config:
 
     CONFIG_FILE: Path = Path.home() / ".config" / "skillboard" / "config.yaml"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration with defaults and load from file."""
         self.paths = SkillPaths()
         self._load_config()
