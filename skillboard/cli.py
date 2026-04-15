@@ -22,6 +22,13 @@ from rich.table import Table
 from . import __version__
 from .config import get_config
 from .manager import SkillManager, are_skills_identical
+from .paths import (
+    ensure_target_directory,
+    resolve_link_source,
+    resolve_source_path,
+    resolve_target_path,
+    validate_source_exists,
+)
 from .tui import run_skill_tui
 
 console = Console()
@@ -116,68 +123,12 @@ def link(
     """
     config = get_config()
 
-    # Resolve source
-    if input_path is None:
-        # Default source is agent
-        source_agent = "agent"
-    else:
-        source_agent = input_path.lower()
-
-    if link_all:
-        # Need to handle multiple sources
-        sources = []
-        if source_agent in config.paths.list_paths():
-            global_path = config.paths.get_path(source_agent)
-            if global_path.exists():
-                sources.append(global_path)
-            local_path = Path(f"./.{source_agent}/skills")
-            if local_path.exists():
-                sources.append(local_path)
-        else:
-            console.print(f"[red]Unknown source agent: {source_agent}[/red]")
-            sys.exit(1)
-
-        if not sources:
-            console.print(f"[red]No skills found for {source_agent}[/red]")
-            sys.exit(1)
-
-        # For now, use first available source
-        source = sources[0]
-        if len(sources) > 1:
-            console.print(f"[dim]Note: Using {sources[0]} (found {len(sources)} sources)[/dim]")
-    else:
-        # Single source based on scope
-        if source_agent in config.paths.list_paths():
-            if input_scope == "local":
-                source = Path(f"./.{source_agent}/skills")
-            else:
-                source = config.paths.get_path(source_agent)
-        else:
-            console.print(f"[red]Unknown source agent: {source_agent}[/red]")
-            console.print(f"Available: {', '.join(config.paths.list_paths().keys())}")
-            sys.exit(1)
-
-    # Resolve target
-    if output_path is None:
-        console.print("[red]Error: Target directory is required. Use -o/--output option.[/red]")
-        sys.exit(1)
-
-    target_agent = output_path.lower()
-    if target_agent in config.paths.list_paths():
-        if output_scope == "local":
-            target = Path(f"./.{target_agent}/skills")
-        else:
-            target = config.paths.get_path(target_agent)
-    else:
-        target = Path(output_path).expanduser()
-
-    # Validate paths
-    if not source.exists():
-        console.print(f"[red]Error: Source directory does not exist: {source}[/red]")
-        sys.exit(1)
-
-    # Create target if it doesn't exist
-    target.mkdir(parents=True, exist_ok=True)
+    # Resolve source and target paths
+    source = resolve_link_source(input_path, input_scope, link_all, config)
+    target = resolve_target_path(output_path, output_scope, config, allow_none=False)
+    assert target is not None  # for type checker
+    validate_source_exists(source)
+    ensure_target_directory(target)
 
     # Info message about symbolic links
     console.print(f"[dim]Creating symbolic links from {source} to {target}...[/dim]\n")
@@ -449,39 +400,12 @@ def copy(
 
     config = get_config()
 
-    # Resolve source
-    if input_path is None:
-        console.print("[red]Error: Source is required. Use -i/--input option.[/red]")
-        sys.exit(1)
-
-    source_agent = input_path.lower()
-    if source_agent in config.paths.list_paths():
-        if input_scope == "local":
-            source_path = Path(f"./.{source_agent}/skills")
-        else:
-            source_path = config.paths.get_path(source_agent)
-    else:
-        source_path = Path(input_path).expanduser()
-
-    # Resolve target
-    if output_path is None:
-        console.print("[red]Error: Target is required. Use -o/--output option.[/red]")
-        sys.exit(1)
-
-    target_agent = output_path.lower()
-    if target_agent in config.paths.list_paths():
-        if output_scope == "local":
-            target_path = Path(f"./.{target_agent}/skills")
-        else:
-            target_path = config.paths.get_path(target_agent)
-    else:
-        target_path = Path(output_path).expanduser()
-
-    if not source_path.exists():
-        console.print(f"[red]Error: Source does not exist: {source_path}[/red]")
-        sys.exit(1)
-
-    target_path.mkdir(parents=True, exist_ok=True)
+    # Resolve source and target paths
+    source_path = resolve_source_path(input_path, input_scope, config)
+    target_path = resolve_target_path(output_path, output_scope, config)
+    assert source_path is not None and target_path is not None  # for type checker
+    validate_source_exists(source_path)
+    ensure_target_directory(target_path)
 
     manager = SkillManager(source_path, target_path)
     skills = manager.get_source_skills()
@@ -619,39 +543,12 @@ def move(
 
     config = get_config()
 
-    # Resolve source
-    if input_path is None:
-        console.print("[red]Error: Source is required. Use -i/--input option.[/red]")
-        sys.exit(1)
-
-    source_agent = input_path.lower()
-    if source_agent in config.paths.list_paths():
-        if input_scope == "local":
-            source_path = Path(f"./.{source_agent}/skills")
-        else:
-            source_path = config.paths.get_path(source_agent)
-    else:
-        source_path = Path(input_path).expanduser()
-
-    # Resolve target
-    if output_path is None:
-        console.print("[red]Error: Target is required. Use -o/--output option.[/red]")
-        sys.exit(1)
-
-    target_agent = output_path.lower()
-    if target_agent in config.paths.list_paths():
-        if output_scope == "local":
-            target_path = Path(f"./.{target_agent}/skills")
-        else:
-            target_path = config.paths.get_path(target_agent)
-    else:
-        target_path = Path(output_path).expanduser()
-
-    if not source_path.exists():
-        console.print(f"[red]Error: Source does not exist: {source_path}[/red]")
-        sys.exit(1)
-
-    target_path.mkdir(parents=True, exist_ok=True)
+    # Resolve source and target paths
+    source_path = resolve_source_path(input_path, input_scope, config)
+    target_path = resolve_target_path(output_path, output_scope, config)
+    assert source_path is not None and target_path is not None  # for type checker
+    validate_source_exists(source_path)
+    ensure_target_directory(target_path)
 
     manager = SkillManager(source_path, target_path)
     skills = manager.get_source_skills()
