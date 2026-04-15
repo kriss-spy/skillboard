@@ -5,21 +5,20 @@ Provides a simple checkbox-based interface for selecting which skills to enable.
 
 import sys
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Any, Optional
 
 from rich.console import Console
-from rich.table import Table
 
 console = Console()
 
 
 def select_skills_interactive(
-    skills: List,
+    skills: list[Any],
     source_path: Path,
     target_path: Optional[Path] = None,
     operation: str = "link",
-    preselected: Optional[Set[str]] = None,
-) -> Optional[Set[str]]:
+    preselected: Optional[set[str]] = None,
+) -> Optional[set[str]]:
     """Interactive skill selection with TUI.
 
     Args:

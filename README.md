@@ -46,8 +46,8 @@ skillboard init
 ```
 
 This creates the default skill directories:
-- `~/.agent/skill-warehouse` - Your skill source of truth
-- `~/.agent/skills` - Standard agent skills
+- `~/.agents/skill-warehouse` - Your skill source of truth
+- `~/.agents/skills` - Standard agent skills
 - `~/.claude/skills` - Claude Code skills
 - `~/.config/opencode/skills` - OpenCode skills
 - `~/.gemini/skills` - Gemini CLI skills
@@ -56,9 +56,9 @@ This creates the default skill directories:
 ### 2. List available skills
 
 ```bash
-skillboard list              # Show all .agent skills (global + local)
+skillboard list              # Show all .agents skills (global + local)
 skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
-skillboard list agent        # Show agent skills (~/.agent/skills + ./agent/skills)
+skillboard list agent        # Show agent skills (~/.agents/skills + ./agents/skills)
 skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
@@ -100,9 +100,9 @@ skillboard init
 List available skills from both global and local locations.
 
 ```bash
-skillboard list              # Show .agent skills (~/.agent/skills + ./.agent/skills)
+skillboard list              # Show .agents skills (~/.agents/skills + ./.agents/skills)
 skillboard list claude       # Show Claude skills (~/.claude/skills + ./claude/skills)
-skillboard list agent        # Show agent skills (~/.agent/skills + ./agent/skills)
+skillboard list agent        # Show agent skills (~/.agents/skills + ./agents/skills)
 skillboard list gemini       # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
 ```
 
@@ -142,14 +142,14 @@ skillboard sync -o claude --no-tui
 
 **Options:**
 - `-o, --output`: Target directory (required) - agent, claude, gemini, opencode, antigravity
-- `-g, --global`: Use global skills from ~/.agent/skills (default)
-- `-l, --local`: Use local skills from ./.agent/skills
+- `-g, --global`: Use global skills from ~/.agents/skills (default)
+- `-l, --local`: Use local skills from ./.agents/skills
 - `-i, --input`: Explicit source directory (overrides -g/-l)
 - `--no-tui`: Run in list-only mode
 
 **Available aliases:**
-- `warehouse`: `~/.agent/skill-warehouse`
-- `agent`: `~/.agent/skills`
+- `warehouse`: `~/.agents/skill-warehouse`
+- `agent`: `~/.agents/skills`
 - `claude`: `~/.claude/skills`
 - `opencode`: `~/.config/opencode/skills`
 - `gemini`: `~/.gemini/skills`
@@ -164,7 +164,7 @@ skillboard copy warehouse claude
 
 ## How It Works
 
-Skillboard treats your **warehouse** (`~/.agent/skill-warehouse`) as the source of truth. When you "enable" a skill:
+Skillboard treats your **warehouse** (`~/.agents/skill-warehouse`) as the source of truth. When you "enable" a skill:
 
 1. A symbolic link is created in the target directory pointing to the skill in the warehouse
 2. The AI agent sees the skill and loads it
@@ -186,12 +186,12 @@ Configuration is stored in `~/.config/skillboard/config.yaml`:
 
 ```yaml
 paths:
-  agent: ~/.agent/skills
+  agent: ~/.agents/skills
   antigravity: ~/.gemini/antigravity/skills
   claude: ~/.claude/skills
   gemini: ~/.gemini/skills
   opencode: ~/.config/opencode/skills
-  warehouse: ~/.agent/skill-warehouse
+  warehouse: ~/.agents/skill-warehouse
 ```
 
 You can customize these paths by editing the config file.

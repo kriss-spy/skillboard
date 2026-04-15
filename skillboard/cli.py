@@ -680,7 +680,7 @@ def move(
 
     # Dry run check
     if dry_run:
-        console.print(f"\n[bold]Dry Run - Would move:[/bold]")
+        console.print("\n[bold]Dry Run - Would move:[/bold]")
         for skill_name in selected_skills:
             console.print(f"  • {skill_name}")
         console.print("\n[dim]No changes made.[/dim]")
