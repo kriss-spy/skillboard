@@ -2,7 +2,7 @@
 
 Provides commands for:
 - sync: Interactive skill management with checkbox UI
-- list: Show available skills (global and local)
+- list: Show available skills in warehouse
 - list-path: Show configured skill paths
 - init: Initialize directories
 - copy: Copy skills (not symlink)
@@ -170,86 +170,39 @@ def list_path() -> None:
 
 
 @cli.command()
-@click.option(
-    "-w",
-    "--warehouse",
-    is_flag=True,
-    help="Show only global (warehouse) skills.",
-)
-@click.option(
-    "-l",
-    "--local",
-    is_flag=True,
-    help="Show only local (current project) skills.",
-)
-def list(warehouse: bool, local: bool) -> None:
-    """List available skills (global and local).
+def list() -> None:
+    """List available skills in the warehouse.
 
-    Shows skills from:
-    - Global: The warehouse directory (source of truth)
-    - Local: Current project directory (if .skills/ exists)
+    Shows all skills from the warehouse directory (source of truth).
 
     \b
-    Examples:
-        skillboard list              # Show all skills
-        skillboard list --warehouse  # Show only warehouse skills
-        skillboard list --local      # Show only local skills
+    Example:
+        skillboard list  # Show all warehouse skills
     """
     config = get_config()
-    has_output = False
+    warehouse_path = config.paths.warehouse
 
-    # Show global/warehouse skills
-    if not local:
-        warehouse_path = config.paths.warehouse
-        if warehouse_path.exists():
-            manager = SkillManager(warehouse_path, warehouse_path)
-            skills = manager.get_source_skills()
+    if warehouse_path.exists():
+        manager = SkillManager(warehouse_path, warehouse_path)
+        skills = manager.get_source_skills()
 
-            console.print(f"\n[bold]Global Skills (from {warehouse_path}):[/bold]")
-            if skills:
-                table = Table()
-                table.add_column("Name", style="green")
-                table.add_column("Location", style="cyan")
+        console.print(f"\n[bold]Available Skills (from {warehouse_path}):[/bold]")
+        if skills:
+            table = Table()
+            table.add_column("Name", style="green")
+            table.add_column("Location", style="cyan")
 
-                for skill in skills:
-                    table.add_row(skill.name, str(skill.path))
+            for skill in skills:
+                table.add_row(skill.name, str(skill.path))
 
-                console.print(table)
-                console.print(f"[dim]Total: {len(skills)} skills[/dim]")
-            else:
-                console.print("[dim]No skills found in warehouse.[/dim]")
-            has_output = True
+            console.print(table)
+            console.print(f"[dim]Total: {len(skills)} skills[/dim]")
         else:
-            console.print(f"\n[yellow]Warehouse not initialized: {warehouse_path}[/yellow]")
-            console.print("Run: skillboard init")
-
-    # Show local project skills
-    if not warehouse:
-        # Check for local skills directory
-        local_skills = Path(".skills")
-        if local_skills.exists() and local_skills.is_dir():
-            manager = SkillManager(local_skills, local_skills)
-            skills = manager.get_source_skills()
-
-            console.print(f"\n[bold]Local Skills (from {local_skills.absolute()}):[/bold]")
-            if skills:
-                table = Table()
-                table.add_column("Name", style="green")
-                table.add_column("Location", style="cyan")
-
-                for skill in skills:
-                    table.add_row(skill.name, str(skill.path))
-
-                console.print(table)
-                console.print(f"[dim]Total: {len(skills)} skills[/dim]")
-            else:
-                console.print("[dim]No skills found in local .skills directory.[/dim]")
-            has_output = True
-        elif not local:  # Only show "not found" if not in local-only mode
-            console.print("\n[dim]No local .skills directory found in current project.[/dim]")
-
-    if has_output:
+            console.print("[dim]No skills found in warehouse.[/dim]")
         console.print()  # Empty line at end
+    else:
+        console.print(f"\n[yellow]Warehouse not initialized: {warehouse_path}[/yellow]")
+        console.print("Run: skillboard init")
 
 
 @cli.command()
