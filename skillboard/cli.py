@@ -2,7 +2,8 @@
 
 Provides commands for:
 - sync: Interactive skill management with checkbox UI
-- list: Show configured skill paths
+- list: Show available skills (global and local)
+- list-path: Show configured skill paths
 - init: Initialize directories
 - copy: Copy skills (not symlink)
 """
@@ -23,7 +24,8 @@ from . import __version__
 console = Console()
 
 
-@click.group(invoke_without_command=True)
+# Enable -h as well as --help
+@click.group(invoke_without_command=True, context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(version=__version__, prog_name="skillboard")
 @click.pass_context
 def cli(ctx: click.Context) -> None:
@@ -34,7 +36,8 @@ def cli(ctx: click.Context) -> None:
 
     Examples:
         skillboard init                    # Initialize directories
-        skillboard list                    # Show configured paths
+        skillboard list                    # Show available skills
+        skillboard list-path               # Show configured paths
         skillboard sync -o claude          # Interactive sync to Claude
         skillboard sync -o agent --no-tui  # Just list skills
     """
@@ -133,8 +136,8 @@ def sync(input_path: Optional[str], output_path: Optional[str], no_tui: bool) ->
         run_skill_tui(source, target)
 
 
-@cli.command()
-def list() -> None:
+@cli.command("list-path")
+def list_path() -> None:
     """List all configured skill paths.
 
     Shows all the skill directories that skillboard knows about,
@@ -156,6 +159,89 @@ def list() -> None:
 
     # Show config file location
     console.print(f"\n[dim]Config file: {config.CONFIG_FILE}[/dim]")
+
+
+@cli.command()
+@click.option(
+    "-w",
+    "--warehouse",
+    is_flag=True,
+    help="Show only global (warehouse) skills.",
+)
+@click.option(
+    "-l",
+    "--local",
+    is_flag=True,
+    help="Show only local (current project) skills.",
+)
+def list(warehouse: bool, local: bool) -> None:
+    """List available skills (global and local).
+
+    Shows skills from:
+    - Global: The warehouse directory (source of truth)
+    - Local: Current project directory (if .skills/ exists)
+
+    \b
+    Examples:
+        skillboard list              # Show all skills
+        skillboard list --warehouse  # Show only warehouse skills
+        skillboard list --local      # Show only local skills
+    """
+    config = get_config()
+    has_output = False
+
+    # Show global/warehouse skills
+    if not local:
+        warehouse_path = config.paths.warehouse
+        if warehouse_path.exists():
+            manager = SkillManager(warehouse_path, warehouse_path)
+            skills = manager.get_source_skills()
+
+            console.print(f"\n[bold]Global Skills (from {warehouse_path}):[/bold]")
+            if skills:
+                table = Table()
+                table.add_column("Name", style="green")
+                table.add_column("Location", style="cyan")
+
+                for skill in skills:
+                    table.add_row(skill.name, str(skill.path))
+
+                console.print(table)
+                console.print(f"[dim]Total: {len(skills)} skills[/dim]")
+            else:
+                console.print("[dim]No skills found in warehouse.[/dim]")
+            has_output = True
+        else:
+            console.print(f"\n[yellow]Warehouse not initialized: {warehouse_path}[/yellow]")
+            console.print("Run: skillboard init")
+
+    # Show local project skills
+    if not warehouse:
+        # Check for local skills directory
+        local_skills = Path(".skills")
+        if local_skills.exists() and local_skills.is_dir():
+            manager = SkillManager(local_skills, local_skills)
+            skills = manager.get_source_skills()
+
+            console.print(f"\n[bold]Local Skills (from {local_skills.absolute()}):[/bold]")
+            if skills:
+                table = Table()
+                table.add_column("Name", style="green")
+                table.add_column("Location", style="cyan")
+
+                for skill in skills:
+                    table.add_row(skill.name, str(skill.path))
+
+                console.print(table)
+                console.print(f"[dim]Total: {len(skills)} skills[/dim]")
+            else:
+                console.print("[dim]No skills found in local .skills directory.[/dim]")
+            has_output = True
+        elif not local:  # Only show "not found" if not in local-only mode
+            console.print(f"\n[dim]No local .skills directory found in current project.[/dim]")
+
+    if has_output:
+        console.print()  # Empty line at end
 
 
 @cli.command()

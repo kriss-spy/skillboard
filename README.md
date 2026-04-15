@@ -53,10 +53,18 @@ This creates the default skill directories:
 - `~/.gemini/skills` - Gemini CLI skills
 - `~/.gemini/antigravity/skills` - Antigravity skills
 
-### 2. List configured paths
+### 2. List available skills
 
 ```bash
-skillboard list
+skillboard list              # Show global and local skills
+skillboard list --warehouse  # Show only warehouse skills
+skillboard list --local      # Show only local project skills
+```
+
+### 3. List configured paths
+
+```bash
+skillboard list-path
 ```
 
 ### 3. Sync skills interactively
@@ -88,10 +96,23 @@ skillboard init
 ```
 
 ### `list`
+List available skills (global and local).
+
+```bash
+skillboard list              # Show all skills
+skillboard list --warehouse  # Show only warehouse skills
+skillboard list --local      # Show only local project skills
+```
+
+Shows skills from:
+- **Global**: The warehouse directory (`~/.agent/skill-warehouse`)
+- **Local**: Current project directory (if `.skills/` exists)
+
+### `list-path`
 Show all configured skill paths and their existence status.
 
 ```bash
-skillboard list
+skillboard list-path
 ```
 
 ### `sync`
