@@ -1,7 +1,6 @@
 """Skill management operations."""
 
 import hashlib
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -202,9 +201,9 @@ class SkillManager:
                 return False
 
         try:
-            # Create relative symlink
-            relative_source = os.path.relpath(source_skill, self.target_path)
-            target_skill.symlink_to(relative_source, target_is_directory=True)
+            # Create absolute symlink (per agent skill standard)
+            absolute_source = source_skill.resolve()
+            target_skill.symlink_to(absolute_source, target_is_directory=True)
             return True
         except Exception as e:
             print(f"Error enabling skill '{skill_name}': {e}")

@@ -1,12 +1,13 @@
 """Command-line interface for skillboard.
 
 Provides commands for:
-- sync: Interactive skill management with checkbox UI
+- link: Create symbolic links to skills (interactive)
 - list: Show available skills in warehouse
 - list-path: Show configured skill paths
 - init: Initialize directories
 - copy: Copy skills (not symlink)
 - move: Move skills between locations
+- read: Display skill content
 """
 
 import shutil
@@ -43,8 +44,8 @@ def cli(ctx: click.Context) -> None:
         skillboard init                    # Initialize directories
         skillboard list                    # Show available skills
         skillboard list-path               # Show configured paths
-        skillboard sync -o claude          # Interactive sync to Claude
-        skillboard sync -o agent --no-tui  # Just list skills
+        skillboard link -o claude          # Interactive link to Claude
+        skillboard link -o agent --no-tui  # Just list skills
     """
     # If no subcommand is provided, show help
     if ctx.invoked_subcommand is None:
@@ -80,9 +81,9 @@ def cli(ctx: click.Context) -> None:
 )
 @click.option(
     "--all",
-    "sync_all",
+    "link_all",
     is_flag=True,
-    help="Sync from both global and local sources.",
+    help="Link from both global and local sources.",
 )
 @click.option(
     "--verbose",
@@ -91,24 +92,27 @@ def cli(ctx: click.Context) -> None:
     help="Show full table of skills (default: summary only).",
 )
 @click.option("--no-tui", is_flag=True, help="Run in non-TUI mode (list skills only).")
-def sync(
+def link(
     input_path: Optional[str],
     output_path: Optional[str],
     input_scope: str,
     output_scope: str,
-    sync_all: bool,
+    link_all: bool,
     verbose_mode: bool,
     no_tui: bool,
 ) -> None:
-    """Sync skills between source and target directories.
+    """Create symbolic links to skills in target directory.
+
+    This command creates symbolic links from source to target,
+    allowing you to toggle skills on/off for different agents.
 
     \b
     Examples:
-        skillboard sync -o claude                    # global -> global
-        skillboard sync -i claude -o agent           # global claude -> global agent
-        skillboard sync -i claude --input-scope local -o agent   # local claude -> global agent
-        skillboard sync -i claude -o agent --output-scope local  # global claude -> local agent
-        skillboard sync -i claude --all -o agent     # (global+local) claude -> global agent
+        skillboard link -o claude                    # global -> global
+        skillboard link -i claude -o agent           # global claude -> global agent
+        skillboard link -i claude --input-scope local -o agent   # local claude -> global agent
+        skillboard link -i claude -o agent --output-scope local  # global claude -> local agent
+        skillboard link -i claude --all -o agent     # (global+local) claude -> global agent
     """
     config = get_config()
 
@@ -119,7 +123,7 @@ def sync(
     else:
         source_agent = input_path.lower()
 
-    if sync_all:
+    if link_all:
         # Need to handle multiple sources
         sources = []
         if source_agent in config.paths.list_paths():
@@ -175,6 +179,9 @@ def sync(
     # Create target if it doesn't exist
     target.mkdir(parents=True, exist_ok=True)
 
+    # Info message about symbolic links
+    console.print(f"[dim]Creating symbolic links from {source} to {target}...[/dim]\n")
+
     if no_tui:
         # Non-TUI mode: just list skills
         manager = SkillManager(source, target)
@@ -204,7 +211,7 @@ def sync(
             console.print(table)
         else:
             # Show compact summary
-            console.print(f"\n[bold]Sync Summary:[/bold] {source} → {target}")
+            console.print(f"\n[bold]Link Summary:[/bold] {source} → {target}")
             console.print(f"  Total:     {len(skills)} skills")
             console.print(f"  Enabled:   {enabled_count} skills")
             console.print(f"  Available: {available_count} skills")
@@ -679,6 +686,95 @@ def move(
             errors += 1
 
     console.print(f"\n[bold]Results:[/bold] {moved} moved, {skipped} skipped, {errors} errors")
+
+
+@cli.command()
+@click.argument("skill_name")
+@click.option(
+    "-a",
+    "--agent",
+    type=str,
+    help="Agent to read from (claude, agent, gemini, opencode, antigravity).",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--github",
+    is_flag=True,
+    help="Read from .github/skills directory.",
+)
+def read(skill_name: str, agent: Optional[str], scope: str, github: bool) -> None:
+    """Display skill content for quick reference.
+
+    Shows the SKILL.md content and file listing without opening an editor.
+
+    \b
+    Examples:
+        skillboard read 3d-web-experience                    # Read from global agent
+        skillboard read my-skill -a claude                   # Read from claude
+        skillboard read my-skill --scope local               # Read from local
+        skillboard read my-skill --github                    # Read from .github/skills
+    """
+    config = get_config()
+
+    # Determine skill path
+    if github:
+        skill_path = Path(".github/skills") / skill_name
+    elif agent:
+        agent_lower = agent.lower()
+        if agent_lower in config.paths.list_paths():
+            if scope == "local":
+                skill_path = Path(f"./.{agent_lower}/skills") / skill_name
+            else:
+                skill_path = config.paths.get_path(agent_lower) / skill_name
+        else:
+            console.print(f"[red]Unknown agent: {agent}[/red]")
+            return
+    else:
+        # Default: check global agent path
+        skill_path = config.paths.agent / skill_name
+        if not skill_path.exists():
+            # Try local
+            skill_path = Path("./.agents/skills") / skill_name
+
+    if not skill_path.exists():
+        console.print(f"[red]Skill not found: {skill_name}[/red]")
+        console.print(f"[dim]Searched: {skill_path}[/dim]")
+        return
+
+    # Display skill info
+    console.print(f"\n[bold]{'─' * 50}[/bold]")
+    console.print(f"[bold cyan]{skill_name}[/bold cyan]")
+    console.print(f"[bold]{'─' * 50}[/bold]\n")
+
+    # Read SKILL.md if it exists
+    skill_md = skill_path / "SKILL.md"
+    if skill_md.exists():
+        content = skill_md.read_text(encoding="utf-8")
+        # Show first 50 lines
+        lines = content.split("\n")[:50]
+        console.print("[bold]SKILL.md:[/bold]\n")
+        for line in lines:
+            console.print(line)
+        if len(content.split("\n")) > 50:
+            console.print("\n[dim]... (truncated, showing first 50 lines)[/dim]")
+    else:
+        console.print("[dim]No SKILL.md found[/dim]")
+
+    # List files in skill directory
+    console.print(f"\n[bold]{'─' * 50}[/bold]")
+    console.print("[bold]Files:[/bold]\n")
+    files = sorted(skill_path.rglob("*"))
+    for file in files:
+        if file.is_file():
+            rel_path = file.relative_to(skill_path)
+            console.print(f"  • {rel_path}")
+
+    console.print(f"\n[bold]{'─' * 50}[/bold]\n")
 
 
 def main() -> None:

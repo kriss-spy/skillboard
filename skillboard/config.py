@@ -20,8 +20,8 @@ class SkillPaths:
         antigravity: Antigravity skills directory
     """
 
-    warehouse: Path = field(default_factory=lambda: Path.home() / ".agent" / "skill-warehouse")
-    agent: Path = field(default_factory=lambda: Path.home() / ".agent" / "skills")
+    warehouse: Path = field(default_factory=lambda: Path.home() / ".agents" / "skill-warehouse")
+    agent: Path = field(default_factory=lambda: Path.home() / ".agents" / "skills")
     claude: Path = field(default_factory=lambda: Path.home() / ".claude" / "skills")
     opencode: Path = field(default_factory=lambda: Path.home() / ".config" / "opencode" / "skills")
     gemini: Path = field(default_factory=lambda: Path.home() / ".gemini" / "skills")

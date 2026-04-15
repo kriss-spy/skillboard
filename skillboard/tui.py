@@ -42,24 +42,42 @@ def run_skill_tui(source_path: Path, target_path: Path) -> None:
     currently_enabled = {skill.name for skill in skills if skill.is_enabled}
 
     console.print(f"\n[bold]Managing skills from:[/bold] {source_path}")
-    console.print(f"[bold]Target directory:[/bold] {target_path}\n")
+    console.print(f"[bold]Target directory:[/bold] {target_path}")
 
-    # Show current skills as a table
-    table = Table(title="Available Skills")
-    table.add_column("Status", justify="center")
-    table.add_column("Skill Name")
-    table.add_column("Type")
+    # Show compact summary instead of full table for many skills
+    enabled_count = sum(1 for s in skills if s.is_enabled)
+    available_count = len(skills) - enabled_count
 
-    for skill in skills:
-        status = "✓" if skill.is_enabled else "✗"
-        link_type = "symlink" if skill.is_symlink else ("copy" if skill.is_enabled else "-")
-        table.add_row(
-            f"[green]{status}[/green]" if skill.is_enabled else f"[dim]{status}[/dim]",
-            skill.name,
-            link_type,
-        )
+    summary = f"\n[bold]Summary:[/bold] {len(skills)} total, {enabled_count} enabled, "
+    summary += f"{available_count} available\n"
+    console.print(summary)
 
-    console.print(table)
+    # Only show full table if 10 or fewer skills, or show first 10
+    if len(skills) <= 10:
+        table = Table(title="Available Skills")
+        table.add_column("Status", justify="center")
+        table.add_column("Skill Name")
+        table.add_column("Type")
+
+        for skill in skills:
+            status = "✓" if skill.is_enabled else "✗"
+            link_type = "symlink" if skill.is_symlink else ("copy" if skill.is_enabled else "-")
+            table.add_row(
+                f"[green]{status}[/green]" if skill.is_enabled else f"[dim]{status}[/dim]",
+                skill.name,
+                link_type,
+            )
+
+        console.print(table)
+    else:
+        # Show first 10 skills as compact list
+        console.print("[dim]First 10 skills:[/dim]")
+        for skill in skills[:10]:
+            status = "✓" if skill.is_enabled else "✗"
+            status_fmt = f"[green]{status}[/green]" if skill.is_enabled else f"[dim]{status}[/dim]"
+            console.print(f"  {status_fmt} {skill.name}")
+        console.print(f"[dim]  ... and {len(skills) - 10} more[/dim]")
+
     console.print()
 
     # Ask user to select skills

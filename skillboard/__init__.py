@@ -5,7 +5,7 @@ by toggling them between a warehouse (source of truth) and active directories
 using symbolic links.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Skillboard Contributors"
 __license__ = "MIT"
 __url__ = "https://github.com/kriss-spy/skillboard"
