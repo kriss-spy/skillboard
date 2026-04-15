@@ -1,9 +1,8 @@
 """Skill management operations."""
 
 import os
-from pathlib import Path
-from typing import List, Set, Tuple
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -49,13 +48,13 @@ class SkillManager:
         self.source_path.mkdir(parents=True, exist_ok=True)
         self.target_path.mkdir(parents=True, exist_ok=True)
 
-    def scan_skills(self) -> List[Skill]:
+    def scan_skills(self) -> list["Skill"]:
         """Scan both source and target directories to get all skills.
 
         Returns:
             List of Skill objects with their status, sorted alphabetically
         """
-        skills: List[Skill] = []
+        skills: list[Skill] = []
 
         # Get all skills from source (warehouse)
         if self.source_path.exists():
@@ -166,7 +165,7 @@ class SkillManager:
             print(f"Error disabling skill '{skill_name}': {e}")
             return False
 
-    def apply_changes(self, enabled_skills: Set[str]) -> Tuple[List[str], List[str]]:
+    def apply_changes(self, enabled_skills: set[str]) -> tuple[list[str], list[str]]:
         """Apply changes to match the desired set of enabled skills.
 
         Args:
@@ -178,8 +177,8 @@ class SkillManager:
         current_skills = self.scan_skills()
         currently_enabled = {s.name for s in current_skills if s.is_enabled}
 
-        enabled: List[str] = []
-        disabled: List[str] = []
+        enabled: list[str] = []
+        disabled: list[str] = []
 
         # Enable skills that should be enabled but aren't
         for skill_name in enabled_skills:
@@ -195,13 +194,13 @@ class SkillManager:
 
         return enabled, disabled
 
-    def get_source_skills(self) -> List[Skill]:
+    def get_source_skills(self) -> list["Skill"]:
         """Get all skills available in the source (warehouse).
 
         Returns:
             List of skills from source directory
         """
-        skills: List[Skill] = []
+        skills: list[Skill] = []
         if self.source_path.exists():
             for item in sorted(self.source_path.iterdir()):
                 if item.is_dir() and not item.name.startswith("."):
@@ -210,13 +209,13 @@ class SkillManager:
                     )
         return skills
 
-    def get_target_skills(self) -> List[Skill]:
+    def get_target_skills(self) -> list["Skill"]:
         """Get all skills currently enabled in the target.
 
         Returns:
             List of skills from target directory
         """
-        skills: List[Skill] = []
+        skills: list[Skill] = []
         if self.target_path.exists():
             for item in self.target_path.iterdir():
                 if item.name.startswith("."):

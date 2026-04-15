@@ -5,13 +5,9 @@ Provides a simple checkbox-based interface for selecting which skills to enable.
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.table import Table
-
-if TYPE_CHECKING:
-    from .manager import SkillManager
 
 console = Console()
 
@@ -33,7 +29,7 @@ def run_skill_tui(source_path: Path, target_path: Path) -> None:
         console.print("Install it with: pip install inquirer")
         sys.exit(1)
 
-    from .manager import SkillManager
+    from skillboard.manager import SkillManager
 
     manager = SkillManager(source_path, target_path)
     skills = manager.scan_skills()

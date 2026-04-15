@@ -1,8 +1,8 @@
 """Configuration management for skillboard."""
 
-from pathlib import Path
-from typing import Dict, Optional
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
 
 import yaml
 
@@ -46,7 +46,7 @@ class SkillPaths:
             raise ValueError(f"Unknown skill path: {name}. Available: {', '.join(paths.keys())}")
         return paths[name]
 
-    def list_paths(self) -> Dict[str, Path]:
+    def list_paths(self) -> dict[str, Path]:
         """List all available skill paths.
 
         Returns:
@@ -81,7 +81,7 @@ class Config:
             return
 
         try:
-            with open(self.CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(self.CONFIG_FILE, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
 
             # Override default paths with config values

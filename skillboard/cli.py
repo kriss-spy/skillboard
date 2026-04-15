@@ -16,16 +16,19 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from . import __version__
 from .config import get_config
 from .manager import SkillManager
 from .tui import run_skill_tui
-from . import __version__
 
 console = Console()
 
 
 # Enable -h as well as --help
-@click.group(invoke_without_command=True, context_settings=dict(help_option_names=["-h", "--help"]))
+@click.group(
+    invoke_without_command=True,
+    context_settings=dict(help_option_names=["-h", "--help"]),
+)
 @click.version_option(version=__version__, prog_name="skillboard")
 @click.pass_context
 def cli(ctx: click.Context) -> None:
@@ -52,14 +55,20 @@ def cli(ctx: click.Context) -> None:
     "--input",
     "input_path",
     type=str,
-    help="Source directory (warehouse). Can be a path or alias: warehouse, agent, claude, opencode, gemini, antigravity",
+    help=(
+        "Source directory (warehouse). Can be a path or alias: "
+        "warehouse, agent, claude, opencode, gemini, antigravity"
+    ),
 )
 @click.option(
     "-o",
     "--output",
     "output_path",
     type=str,
-    help="Target directory (where skills will be linked). Can be a path or alias: agent, claude, opencode, gemini, antigravity",
+    help=(
+        "Target directory (where skills will be linked). Can be a path or alias: "
+        "agent, claude, opencode, gemini, antigravity"
+    ),
 )
 @click.option("--no-tui", is_flag=True, help="Run in non-TUI mode (list skills only).")
 def sync(input_path: Optional[str], output_path: Optional[str], no_tui: bool) -> None:
@@ -128,9 +137,8 @@ def sync(input_path: Optional[str], output_path: Optional[str], no_tui: bool) ->
             table.add_row(status, skill.name, link_type)
 
         console.print(table)
-        console.print(
-            f"\n[dim]Total: {len(skills)} skills, {sum(1 for s in skills if s.is_enabled)} enabled[/dim]"
-        )
+        enabled_count = sum(1 for s in skills if s.is_enabled)
+        console.print(f"\n[dim]Total: {len(skills)} skills, {enabled_count} enabled[/dim]")
     else:
         # Interactive TUI mode
         run_skill_tui(source, target)
@@ -238,7 +246,7 @@ def list(warehouse: bool, local: bool) -> None:
                 console.print("[dim]No skills found in local .skills directory.[/dim]")
             has_output = True
         elif not local:  # Only show "not found" if not in local-only mode
-            console.print(f"\n[dim]No local .skills directory found in current project.[/dim]")
+            console.print("\n[dim]No local .skills directory found in current project.[/dim]")
 
     if has_output:
         console.print()  # Empty line at end
