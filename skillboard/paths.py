@@ -3,13 +3,10 @@
 Provides consistent path resolution across all CLI commands.
 """
 
-import sys
 from pathlib import Path
 from typing import Optional
 
-from rich.console import Console
-
-console = Console()
+from .errors import ExitCode, error
 
 
 def resolve_agent_path(
@@ -38,36 +35,30 @@ def resolve_agent_path(
         else:
             return config.paths.get_path(agent_lower)
     else:
-        console.print(f"[red]Error: Unknown agent '{agent_name}'[/red]")
-        console.print(f"Available: {', '.join(config.paths.list_paths().keys())}")
-        sys.exit(1)
+        available = ", ".join(config.paths.list_paths().keys())
+        error(f"Unknown agent '{agent_name}'. Available: {available}", ExitCode.INVALID_ARGUMENTS)
 
 
 def resolve_source_path(
     input_path: Optional[str],
     scope: str,
     config,
-    allow_none: bool = False,
-) -> Optional[Path]:
+) -> Path:
     """Resolve source path from input string.
 
     Args:
-        input_path: Agent name, alias, or explicit path (or None)
+        input_path: Agent name, alias, or explicit path
         scope: 'global' or 'local'
         config: Config instance with path mappings
-        allow_none: If True, return None when input_path is None
 
     Returns:
-        Resolved Path object, or None if allow_none and input_path is None
+        Resolved Path object
 
     Raises:
-        SystemExit: If input_path is None and not allow_none, or if invalid
+        SystemExit: If input_path is invalid
     """
     if input_path is None:
-        if allow_none:
-            return None
-        console.print("[red]Error: Source is required. Use -i/--input option.[/red]")
-        sys.exit(1)
+        error("Source is required. Use -i/--input option.", ExitCode.INVALID_ARGUMENTS)
 
     # Check if it's an agent alias
     agent_lower = input_path.lower()
@@ -82,27 +73,22 @@ def resolve_target_path(
     output_path: Optional[str],
     scope: str,
     config,
-    allow_none: bool = False,
-) -> Optional[Path]:
+) -> Path:
     """Resolve target path from output string.
 
     Args:
-        output_path: Agent name, alias, or explicit path (or None)
+        output_path: Agent name, alias, or explicit path
         scope: 'global' or 'local'
         config: Config instance with path mappings
-        allow_none: If True, return None when output_path is None
 
     Returns:
-        Resolved Path object, or None if allow_none and output_path is None
+        Resolved Path object
 
     Raises:
-        SystemExit: If output_path is None and not allow_none, or if invalid
+        SystemExit: If output_path is invalid
     """
     if output_path is None:
-        if allow_none:
-            return None
-        console.print("[red]Error: Target is required. Use -o/--output option.[/red]")
-        sys.exit(1)
+        error("Target is required. Use -o/--output option.", ExitCode.INVALID_ARGUMENTS)
 
     # Check if it's an agent alias
     agent_lower = output_path.lower()
@@ -143,8 +129,7 @@ def resolve_link_source(
         if source_agent in config.paths.list_paths():
             return config.paths.get_path(source_agent)
         else:
-            console.print(f"[red]Unknown source agent: {source_agent}[/red]")
-            sys.exit(1)
+            error(f"Unknown source agent: {source_agent}", ExitCode.INVALID_ARGUMENTS)
 
     # Single source
     return resolve_source_path(input_path or source_agent, input_scope, config)
@@ -160,8 +145,7 @@ def validate_source_exists(path: Path) -> None:
         SystemExit: If path doesn't exist
     """
     if not path.exists():
-        console.print(f"[red]Error: Source does not exist: {path}[/red]")
-        sys.exit(1)
+        error(f"Source does not exist: {path}", ExitCode.SOURCE_NOT_FOUND)
 
 
 def ensure_target_directory(path: Path) -> None:

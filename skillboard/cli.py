@@ -125,8 +125,7 @@ def link(
 
     # Resolve source and target paths
     source = resolve_link_source(input_path, input_scope, link_all, config)
-    target = resolve_target_path(output_path, output_scope, config, allow_none=False)
-    assert target is not None  # for type checker
+    target = resolve_target_path(output_path, output_scope, config)
     validate_source_exists(source)
     ensure_target_directory(target)
 
@@ -403,7 +402,6 @@ def copy(
     # Resolve source and target paths
     source_path = resolve_source_path(input_path, input_scope, config)
     target_path = resolve_target_path(output_path, output_scope, config)
-    assert source_path is not None and target_path is not None  # for type checker
     validate_source_exists(source_path)
     ensure_target_directory(target_path)
 
@@ -546,7 +544,6 @@ def move(
     # Resolve source and target paths
     source_path = resolve_source_path(input_path, input_scope, config)
     target_path = resolve_target_path(output_path, output_scope, config)
-    assert source_path is not None and target_path is not None  # for type checker
     validate_source_exists(source_path)
     ensure_target_directory(target_path)
 
