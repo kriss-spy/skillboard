@@ -61,9 +61,9 @@ dev = [
 skillboard = "skillboard.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/user/skillboard"
-Repository = "https://github.com/user/skillboard"
-Issues = "https://github.com/user/skillboard/issues"
+Homepage = "https://github.com/kriss-spy/skillboard"
+Repository = "https://github.com/kriss-spy/skillboard"
+Issues = "https://github.com/kriss-spy/skillboard/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["skillboard"]

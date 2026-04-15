@@ -32,7 +32,7 @@ pip install skillboard
 ### From Source
 
 ```bash
-git clone https://github.com/user/skillboard.git
+git clone https://github.com/kriss-spy/skillboard.git
 cd skillboard
 pip install -e .
 ```
@@ -170,7 +170,7 @@ You can customize these paths by editing the config file.
 
 ```bash
 # Clone the repository
-git clone https://github.com/user/skillboard.git
+git clone https://github.com/kriss-spy/skillboard.git
 cd skillboard
 
 # Create virtual environment
