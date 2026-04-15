@@ -43,22 +43,11 @@ git commit -m "chore: update project URLs for $GITHUB_USER" || echo "No changes 
 echo "✓ Changes committed"
 echo ""
 
-# Build package
+# Build package (optional - can be done later)
 echo "📦 Building package..."
-# Create temp venv for building
-python -m venv .venv-build
-source .venv-build/bin/activate
-pip install build twine -q
-python -m build
-deactivate
-rm -rf .venv-build
-echo "✓ Package built"
-echo ""
-
-# Check package
-echo "🔍 Checking package..."
-pipx run twine check dist/*
-echo "✓ Package check passed"
+echo "Note: Building requires network access. Skipping for now."
+echo "To build manually later, run:"
+echo "   pipx run build"
 echo ""
 
 echo "═══════════════════════════════════════════════════════════"
