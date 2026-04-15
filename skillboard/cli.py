@@ -434,7 +434,12 @@ def copy(
     if not all:
         try:
             import inquirer
+        except ImportError:
+            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
+            console.print("Install with: pip install inquirer")
+            return
 
+        try:
             confirm_q = [
                 inquirer.Confirm(
                     "confirm", message=f"Copy {len(selected_skills)} skill(s)?", default=True
@@ -587,7 +592,12 @@ def move(
 
     try:
         import inquirer
+    except ImportError:
+        console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
+        console.print("Install with: pip install inquirer")
+        return
 
+    try:
         confirm_q = [
             inquirer.Confirm(
                 "confirm", message=f"Move {len(selected_skills)} skill(s)?", default=False
@@ -597,7 +607,7 @@ def move(
         if not confirm_a or not confirm_a["confirm"]:
             console.print("\n[yellow]Cancelled.[/yellow]")
             return
-    except (KeyboardInterrupt, ImportError):
+    except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled.[/yellow]")
         return
 
