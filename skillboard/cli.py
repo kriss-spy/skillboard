@@ -187,7 +187,7 @@ def list(agent: Optional[str]) -> None:
 
     if agent is None:
         # Default: show .agent skills (warehouse + local)
-        _list_skills_from_locations("Agent Skills", config.paths.warehouse, Path(".agent/skills"))
+        _list_skills_from_locations("Agent Skills", config.paths.agent, Path(".agent/skills"))
     else:
         # Show skills for specific agent
         agent_lower = agent.lower()
