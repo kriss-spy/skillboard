@@ -212,3 +212,96 @@ class TestConfig:
         config2 = get_config()
 
         assert config1 is not config2
+
+
+class TestContentHash:
+    """Tests for content hash functionality."""
+
+    def test_get_skill_content_hash_same_content(self, tmp_path):
+        """Test that identical skills have same hash."""
+        from skillboard.manager import get_skill_content_hash
+
+        # Create two identical skill directories
+        skill1 = tmp_path / "skill1"
+        skill2 = tmp_path / "skill2"
+        skill1.mkdir()
+        skill2.mkdir()
+
+        # Create identical files
+        (skill1 / "README.md").write_text("# Test Skill")
+        (skill2 / "README.md").write_text("# Test Skill")
+
+        hash1 = get_skill_content_hash(skill1)
+        hash2 = get_skill_content_hash(skill2)
+
+        assert hash1 == hash2
+        assert hash1 != ""  # Hash should not be empty
+
+    def test_get_skill_content_hash_different_content(self, tmp_path):
+        """Test that different skills have different hashes."""
+        from skillboard.manager import get_skill_content_hash
+
+        skill1 = tmp_path / "skill1"
+        skill2 = tmp_path / "skill2"
+        skill1.mkdir()
+        skill2.mkdir()
+
+        # Create different files
+        (skill1 / "README.md").write_text("# Skill One")
+        (skill2 / "README.md").write_text("# Skill Two")
+
+        hash1 = get_skill_content_hash(skill1)
+        hash2 = get_skill_content_hash(skill2)
+
+        assert hash1 != hash2
+
+    def test_are_skills_identical(self, tmp_path):
+        """Test skill identity check."""
+        from skillboard.manager import are_skills_identical
+
+        skill1 = tmp_path / "skill1"
+        skill2 = tmp_path / "skill2"
+        skill1.mkdir()
+        skill2.mkdir()
+
+        (skill1 / "file.txt").write_text("content")
+        (skill2 / "file.txt").write_text("content")
+
+        assert are_skills_identical(skill1, skill2) is True
+
+        # Change one file
+        (skill2 / "file.txt").write_text("different")
+        assert are_skills_identical(skill1, skill2) is False
+
+
+class TestSkillCounting:
+    """Tests for skill counting functionality."""
+
+    def test_count_skills_in_directory(self, tmp_path):
+        """Test counting skills in a directory."""
+        from skillboard.manager import count_skills_in_directory
+
+        # Empty directory
+        assert count_skills_in_directory(tmp_path) == 0
+
+        # Add skills
+        (tmp_path / "skill-a").mkdir()
+        (tmp_path / "skill-b").mkdir()
+        assert count_skills_in_directory(tmp_path) == 2
+
+    def test_count_skills_ignores_hidden(self, tmp_path):
+        """Test that hidden directories are ignored."""
+        from skillboard.manager import count_skills_in_directory
+
+        (tmp_path / "skill-a").mkdir()
+        (tmp_path / ".hidden").mkdir()
+        (tmp_path / "__pycache__").mkdir()
+
+        assert count_skills_in_directory(tmp_path) == 1
+
+    def test_count_skills_nonexistent_path(self, tmp_path):
+        """Test counting in non-existent path."""
+        from skillboard.manager import count_skills_in_directory
+
+        nonexistent = tmp_path / "does-not-exist"
+        assert count_skills_in_directory(nonexistent) == 0

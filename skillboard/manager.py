@@ -1,8 +1,80 @@
 """Skill management operations."""
 
+import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+
+def get_skill_content_hash(skill_path: Path) -> str:
+    """Calculate SHA256 hash of skill directory contents.
+
+    Hashes all files recursively, sorted by path to ensure consistent ordering.
+
+    Args:
+        skill_path: Path to the skill directory
+
+    Returns:
+        Hex digest of the content hash
+    """
+    sha256 = hashlib.sha256()
+
+    if not skill_path.exists():
+        return ""
+
+    # Get all files sorted by path for consistency
+    files = sorted(skill_path.rglob("*"))
+
+    for file_path in files:
+        if file_path.is_file():
+            # Add relative path to hash
+            rel_path = file_path.relative_to(skill_path).as_posix()
+            sha256.update(rel_path.encode())
+            sha256.update(b"\0")  # Separator
+
+            # Add file content to hash
+            try:
+                with open(file_path, "rb") as f:
+                    for chunk in iter(lambda: f.read(8192), b""):
+                        sha256.update(chunk)
+            except (OSError, IOError):
+                # Skip files that can't be read
+                sha256.update(b"<unreadable>")
+            sha256.update(b"\0")  # Separator
+
+    return sha256.hexdigest()[:16]  # Use first 16 chars for readability
+
+
+def are_skills_identical(skill1_path: Path, skill2_path: Path) -> bool:
+    """Check if two skill directories have identical content.
+
+    Args:
+        skill1_path: Path to first skill
+        skill2_path: Path to second skill
+
+    Returns:
+        True if skills have identical content
+    """
+    return get_skill_content_hash(skill1_path) == get_skill_content_hash(skill2_path)
+
+
+def count_skills_in_directory(path: Path) -> int:
+    """Count non-hidden skill directories in a path.
+
+    Args:
+        path: Path to directory
+
+    Returns:
+        Number of skill directories (non-hidden, non-special)
+    """
+    if not path.exists():
+        return 0
+
+    count = 0
+    for item in path.iterdir():
+        if item.is_dir() and not item.name.startswith(".") and not item.name.startswith("__"):
+            count += 1
+    return count
 
 
 @dataclass

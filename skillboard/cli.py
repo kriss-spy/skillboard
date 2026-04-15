@@ -82,6 +82,12 @@ def cli(ctx: click.Context) -> None:
     is_flag=True,
     help="Sync from both global and local sources.",
 )
+@click.option(
+    "--verbose",
+    "verbose_mode",
+    is_flag=True,
+    help="Show full table of skills (default: summary only).",
+)
 @click.option("--no-tui", is_flag=True, help="Run in non-TUI mode (list skills only).")
 def sync(
     input_path: Optional[str],
@@ -89,6 +95,7 @@ def sync(
     input_scope: str,
     output_scope: str,
     sync_all: bool,
+    verbose_mode: bool,
     no_tui: bool,
 ) -> None:
     """Sync skills between source and target directories.
@@ -175,21 +182,32 @@ def sync(
             console.print(f"[yellow]No skills found in {source}[/yellow]")
             return
 
-        table = Table(title=f"Skills: {source} → {target}")
-        table.add_column("Status", justify="center", style="cyan")
-        table.add_column("Name", style="green")
-        table.add_column("Type", style="yellow")
-
-        for skill in skills:
-            status = "✓" if skill.is_enabled else "✗"
-            link_type = (
-                "symlink" if skill.is_symlink else ("directory" if skill.is_enabled else "-")
-            )
-            table.add_row(status, skill.name, link_type)
-
-        console.print(table)
         enabled_count = sum(1 for s in skills if s.is_enabled)
-        console.print(f"\n[dim]Total: {len(skills)} skills, {enabled_count} enabled[/dim]")
+        available_count = len(skills) - enabled_count
+
+        if verbose_mode:
+            # Show full table
+            table = Table(title=f"Skills: {source} → {target}")
+            table.add_column("Status", justify="center", style="cyan")
+            table.add_column("Name", style="green")
+            table.add_column("Type", style="yellow")
+
+            for skill in skills:
+                status = "✓" if skill.is_enabled else "✗"
+                link_type = (
+                    "symlink" if skill.is_symlink else ("directory" if skill.is_enabled else "-")
+                )
+                table.add_row(status, skill.name, link_type)
+
+            console.print(table)
+        else:
+            # Show compact summary
+            console.print(f"\n[bold]Sync Summary:[/bold] {source} → {target}")
+            console.print(f"  Total:     {len(skills)} skills")
+            console.print(f"  Enabled:   {enabled_count} skills")
+            console.print(f"  Available: {available_count} skills")
+
+        console.print(f"\n[dim]Use --verbose to see full skill list[/dim]")
     else:
         # Interactive TUI mode
         run_skill_tui(source, target)
@@ -197,22 +215,32 @@ def sync(
 
 @cli.command("list-path")
 def list_path() -> None:
-    """List all configured skill paths.
+    """List all configured skill paths with skill counts.
 
     Shows all the skill directories that skillboard knows about,
-    along with whether they exist.
+    along with whether they exist and how many skills they contain.
     """
+    from skillboard.manager import count_skills_in_directory
+
     config = get_config()
 
     table = Table(title="Configured Skill Paths")
     table.add_column("Alias", style="cyan", no_wrap=True)
     table.add_column("Path", style="green")
     table.add_column("Exists", justify="center")
+    table.add_column("Skills", justify="right", style="yellow")
 
     for name, path in config.paths.list_paths().items():
         exists = "✓" if path.exists() else "✗"
         exists_style = "green" if path.exists() else "red"
-        table.add_row(name, str(path), f"[{exists_style}]{exists}[/{exists_style}]")
+        skill_count = count_skills_in_directory(path)
+        count_str = str(skill_count) if path.exists() else "-"
+        table.add_row(
+            name,
+            str(path),
+            f"[{exists_style}]{exists}[/{exists_style}]",
+            count_str,
+        )
 
     console.print(table)
 
@@ -429,6 +457,229 @@ def copy(
                 errors += 1
 
     console.print(f"\n[bold]Results:[/bold] {copied} copied, {skipped} skipped, {errors} errors")
+
+
+@cli.command()
+@click.option(
+    "-i",
+    "--input",
+    "input_path",
+    type=str,
+    help="Source agent (claude, agent, gemini, opencode, antigravity, warehouse).",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=str,
+    help="Target agent (claude, agent, gemini, opencode, antigravity).",
+)
+@click.option(
+    "--input-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for input: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--output-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope for output: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite existing skills in target without prompting.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be moved without actually moving.",
+)
+def move(
+    input_path: Optional[str],
+    output_path: Optional[str],
+    input_scope: str,
+    output_scope: str,
+    force: bool,
+    dry_run: bool,
+) -> None:
+    """Move skills from source to target (copy + delete from source).
+
+    This command copies skills to the target and removes them from the source.
+    Use with caution - this permanently deletes skills from the source location.
+
+    \b
+    Examples:
+        skillboard move -i claude -o agent                    # global -> global
+        skillboard move -i claude --input-scope local -o agent # local -> global
+        skillboard move -i claude -o agent --output-scope local # global -> local
+        skillboard move -i claude -o agent --dry-run          # Preview what would move
+    """
+    import shutil
+    from skillboard.manager import are_skills_identical
+
+    config = get_config()
+
+    # Resolve source
+    if input_path is None:
+        console.print("[red]Error: Source is required. Use -i/--input option.[/red]")
+        sys.exit(1)
+
+    source_agent = input_path.lower()
+    if source_agent in config.paths.list_paths():
+        if input_scope == "local":
+            source_path = Path(f"./.{source_agent}/skills")
+        else:
+            source_path = config.paths.get_path(source_agent)
+    else:
+        source_path = Path(input_path).expanduser()
+
+    # Resolve target
+    if output_path is None:
+        console.print("[red]Error: Target is required. Use -o/--output option.[/red]")
+        sys.exit(1)
+
+    target_agent = output_path.lower()
+    if target_agent in config.paths.list_paths():
+        if output_scope == "local":
+            target_path = Path(f"./.{target_agent}/skills")
+        else:
+            target_path = config.paths.get_path(target_agent)
+    else:
+        target_path = Path(output_path).expanduser()
+
+    if not source_path.exists():
+        console.print(f"[red]Error: Source does not exist: {source_path}[/red]")
+        sys.exit(1)
+
+    target_path.mkdir(parents=True, exist_ok=True)
+
+    manager = SkillManager(source_path, target_path)
+    skills = manager.get_source_skills()
+
+    if not skills:
+        console.print(f"[yellow]No skills found in {source_path}[/yellow]")
+        return
+
+    # Check for conflicts
+    conflicts = []
+    to_move = []
+
+    for skill in skills:
+        dest = target_path / skill.name
+        if dest.exists():
+            # Check if content is identical
+            if are_skills_identical(skill.path, dest):
+                # Same content, will skip
+                conflicts.append((skill.name, "identical"))
+            else:
+                # Different content - real conflict
+                conflicts.append((skill.name, "different"))
+        else:
+            to_move.append(skill)
+
+    # Show summary
+    console.print(f"\n[bold]Move Summary:[/bold] {source_path} → {target_path}")
+    console.print(f"  Total skills in source: {len(skills)}")
+    console.print(f"  Ready to move: {len(to_move)}")
+
+    if conflicts:
+        identical_count = sum(1 for _, status in conflicts if status == "identical")
+        different_count = sum(1 for _, status in conflicts if status == "different")
+        if identical_count:
+            console.print(f"  Already exists (identical): {identical_count}")
+        if different_count:
+            console.print(f"  [yellow]Conflicts (different content): {different_count}[/yellow]")
+
+    # Show what will be moved
+    if to_move:
+        console.print(f"\n[cyan]Skills to move:[/cyan]")
+        for skill in to_move:
+            console.print(f"  • {skill.name}")
+
+    if not to_move:
+        console.print("\n[dim]No skills to move.[/dim]")
+        return
+
+    if dry_run:
+        console.print("\n[dim]--dry-run specified, no changes made.[/dim]")
+        return
+
+    # Safety confirmation
+    console.print(
+        f"\n[yellow]⚠️  Warning: This will PERMANENTLY DELETE skills from {source_path}[/yellow]"
+    )
+    confirm_msg = f"Move {len(to_move)} skill(s)?"
+
+    try:
+        import inquirer
+
+        confirm_question = [inquirer.Confirm("confirm", message=confirm_msg, default=False)]
+        confirm_answer = inquirer.prompt(confirm_question)
+        if not confirm_answer or not confirm_answer["confirm"]:
+            console.print("\n[yellow]Cancelled.[/yellow]")
+            return
+    except (KeyboardInterrupt, ImportError):
+        console.print("\n[yellow]Cancelled.[/yellow]")
+        return
+
+    # Perform the move
+    moved = 0
+    skipped = 0
+    errors = 0
+
+    console.print(f"\n[bold]Moving skills...[/bold]\n")
+
+    for skill in to_move:
+        dest = target_path / skill.name
+
+        # Handle existing files
+        if dest.exists():
+            if are_skills_identical(skill.path, dest):
+                console.print(f"[dim]⏭ Skipping (identical): {skill.name}[/dim]")
+                skipped += 1
+                continue
+            elif force:
+                # Remove existing and continue
+                try:
+                    if dest.is_symlink():
+                        dest.unlink()
+                    else:
+                        shutil.rmtree(dest)
+                except Exception as e:
+                    console.print(f"[red]✗ Error removing existing {skill.name}: {e}[/red]")
+                    errors += 1
+                    continue
+            else:
+                console.print(f"[yellow]⚠ Skipped (conflict): {skill.name}[/yellow]")
+                skipped += 1
+                continue
+
+        # Copy to target
+        try:
+            shutil.copytree(skill.path, dest)
+        except Exception as e:
+            console.print(f"[red]✗ Error copying {skill.name}: {e}[/red]")
+            errors += 1
+            continue
+
+        # Delete from source
+        try:
+            if skill.path.is_symlink():
+                skill.path.unlink()
+            else:
+                shutil.rmtree(skill.path)
+            console.print(f"[green]✓ Moved:[/green] {skill.name}")
+            moved += 1
+        except Exception as e:
+            console.print(f"[red]✗ Error deleting {skill.name} from source: {e}[/red]")
+            console.print(
+                f"[yellow]  Warning: {skill.name} was copied to target but not removed from source[/yellow]"
+            )
+            errors += 1
+
+    console.print(f"\n[bold]Results:[/bold] {moved} moved, {skipped} skipped, {errors} errors")
 
 
 def main() -> None:
