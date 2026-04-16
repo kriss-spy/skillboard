@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - New `install` command to fetch skills from GitHub repositories
-  - Supports `owner/repo` format: `skillboard install anthropic/docx`
-  - Supports full GitHub URLs: `skillboard install https://github.com/anthropic/docx`
+  - Supports `owner/repo` format: `skillboard install vercel-labs/skills --subpath skills`
+  - Supports full GitHub URLs: `skillboard install https://github.com/vercel-labs/skills --subpath skills`
   - Custom subpath support for repos like `vercel-labs/skills`
   - Auto-detects single skill vs multi-skill repositories
   - Downloads and extracts with progress indicators

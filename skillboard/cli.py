@@ -772,9 +772,9 @@ def install(
     Automatically downloads and extracts skills to the target directory.
 
     Examples:
-        skillboard install anthropic/docx -o warehouse
         skillboard install vercel-labs/skills -o warehouse --subpath skills
-        skillboard install https://github.com/anthropic/docx -o claude
+        skillboard install owner/skill-repo -o warehouse
+        skillboard install https://github.com/vercel-labs/skills -o warehouse --subpath skills
     """
     config = get_config()
 

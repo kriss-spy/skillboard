@@ -84,11 +84,11 @@ skillboard link -o claude --no-tui
 ### 4. Install skills from GitHub
 
 ```bash
-# Install a skill from GitHub to your warehouse
-skillboard install anthropic/docx -o warehouse
-
 # Install from Vercel Labs skills collection
 skillboard install vercel-labs/skills -o warehouse --subpath skills
+
+# Install a single skill repo
+skillboard install owner/my-skill-repo -o warehouse
 ```
 
 ### 5. Copy or move skills
@@ -247,22 +247,22 @@ Install skills from a GitHub repository. Automatically downloads and extracts sk
 
 **Install from GitHub (owner/repo format):**
 ```bash
-# Install a single skill repo
-skillboard install anthropic/docx -o warehouse
-
 # Install from Vercel Labs skills collection
 skillboard install vercel-labs/skills -o warehouse --subpath skills
 
+# Install a single skill repo
+skillboard install owner/my-skill-repo -o warehouse
+
 # Install from a specific branch
-skillboard install anthropic/docx -o warehouse --branch main
+skillboard install vercel-labs/skills -o warehouse --subpath skills --branch main
 
 # Install with force (overwrite existing)
-skillboard install anthropic/docx -o warehouse --force
+skillboard install vercel-labs/skills -o warehouse --subpath skills --force
 ```
 
 **Install from full GitHub URL:**
 ```bash
-skillboard install https://github.com/anthropic/docx -o warehouse
+skillboard install https://github.com/vercel-labs/skills -o warehouse --subpath skills
 ```
 
 **Auto-detection:**
