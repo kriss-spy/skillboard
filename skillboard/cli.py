@@ -8,14 +8,20 @@ Provides commands for:
 - copy: Copy skills (not symlink)
 - move: Move skills between locations
 - read: Display skill content
+- install: Install skills from GitHub repos
 """
 
 import shutil
+import tempfile
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Optional
 
 import click
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from . import __version__
@@ -731,6 +737,215 @@ def read(skill_name: str, agent: Optional[str], scope: str, github: bool) -> Non
             console.print(f"  • {rel_path}")
 
     console.print(f"\n[bold]{'─' * 50}[/bold]\n")
+
+
+@cli.command()
+@click.argument("repo")
+@click.option(
+    "-o",
+    "--output",
+    type=str,
+    help="Target agent or path to install to (default: warehouse).",
+)
+@click.option(
+    "--branch",
+    type=str,
+    default="main",
+    help="Git branch to install from (default: main).",
+)
+@click.option(
+    "--subpath",
+    type=str,
+    help="Subpath within the repo where skills are located (e.g., 'skills').",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite existing skills.",
+)
+def install(
+    repo: str, output: Optional[str], branch: str, subpath: Optional[str], force: bool
+) -> None:
+    """Install skills from a GitHub repository.
+
+    Supports installing from GitHub repos in the format 'owner/repo' or full URLs.
+    Automatically downloads and extracts skills to the target directory.
+
+    Examples:
+        skillboard install anthropic/docx -o warehouse
+        skillboard install vercel-labs/skills -o warehouse --subpath skills
+        skillboard install https://github.com/anthropic/docx -o claude
+    """
+    config = get_config()
+
+    # Parse repo reference
+    if repo.startswith("https://github.com/"):
+        # Full URL
+        parts = repo.replace("https://github.com/", "").split("/")
+        if len(parts) < 2:
+            console.print("[red]Invalid GitHub URL format[/red]")
+            return
+        owner, repo_name = parts[0], parts[1]
+    elif "/" in repo:
+        # owner/repo format
+        parts = repo.split("/")
+        if len(parts) != 2:
+            console.print("[red]Invalid repo format. Use 'owner/repo'[/red]")
+            return
+        owner, repo_name = parts[0], parts[1]
+    else:
+        console.print("[red]Invalid repo format. Use 'owner/repo' or full GitHub URL[/red]")
+        return
+
+    # Determine target directory
+    if output is None:
+        target = config.paths.warehouse
+    elif output.lower() in config.paths.list_paths():
+        target = config.paths.get_path(output.lower())
+    else:
+        target = Path(output).expanduser()
+
+    ensure_target_directory(target)
+
+    # Construct download URL
+    zip_url = f"https://github.com/{owner}/{repo_name}/archive/refs/heads/{branch}.zip"
+
+    console.print(f"[bold]Installing from:[/bold] {owner}/{repo_name}@{branch}")
+    console.print(f"[dim]Target:[/dim] {target}\n")
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            zip_path = tmp_path / "repo.zip"
+
+            # Download with progress
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Downloading...", total=None)
+
+                try:
+                    urllib.request.urlretrieve(zip_url, zip_path)
+                    progress.update(task, description="[green]Downloaded[/green]")
+                except urllib.error.HTTPError as e:
+                    if e.code == 404:
+                        not_found_msg = (
+                            f"[red]Repository/branch not found: {owner}/{repo_name}@{branch}[/red]"
+                        )
+                        console.print(not_found_msg)
+                        return
+                    raise
+
+            # Extract
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Extracting...", total=None)
+
+                extract_path = tmp_path / "extracted"
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(extract_path)
+                progress.update(task, description="[green]Extracted[/green]")
+
+            # Find the extracted directory (usually repo_name-branch)
+            extracted_dirs = [d for d in extract_path.iterdir() if d.is_dir()]
+            if not extracted_dirs:
+                console.print("[red]No directory found in archive[/red]")
+                return
+
+            repo_root = extracted_dirs[0]
+
+            # Determine skills directory
+            if subpath:
+                skills_dir = repo_root / subpath
+            else:
+                # Try to auto-detect common patterns
+                if (repo_root / "skills").exists():
+                    skills_dir = repo_root / "skills"
+                elif (repo_root / "SKILL.md").exists():
+                    # Single skill repo
+                    skills_dir = repo_root
+                else:
+                    # Use root as skills directory
+                    skills_dir = repo_root
+
+            if not skills_dir.exists():
+                console.print(f"[red]Skills directory not found: {subpath or 'root'}[/red]")
+                return
+
+            # Install skills
+            installed = 0
+            skipped = 0
+            errors = 0
+
+            console.print("\n[bold]Installing skills...[/bold]\n")
+
+            # Handle single skill repo
+            if (skills_dir / "SKILL.md").exists():
+                # This is a single skill
+                skill_name = repo_name
+                dest = target / skill_name
+
+                if dest.exists() and not force:
+                    console.print(f"[yellow]⚠ Skipped (exists):[/yellow] {skill_name}")
+                    skipped += 1
+                else:
+                    try:
+                        if dest.exists():
+                            shutil.rmtree(dest)
+                        shutil.copytree(
+                            skills_dir,
+                            dest,
+                            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+                        )
+                        console.print(f"[green]✓ Installed:[/green] {skill_name}")
+                        installed += 1
+                    except Exception as e:
+                        console.print(f"[red]✗ Error installing {skill_name}: {e}[/red]")
+                        errors += 1
+            else:
+                # Multiple skills in directory
+                for skill_path in sorted(skills_dir.iterdir()):
+                    if not skill_path.is_dir() or skill_path.name.startswith("."):
+                        continue
+
+                    skill_name = skill_path.name
+                    dest = target / skill_name
+
+                    if dest.exists() and not force:
+                        console.print(f"[yellow]⚠ Skipped (exists):[/yellow] {skill_name}")
+                        skipped += 1
+                    else:
+                        try:
+                            if dest.exists():
+                                shutil.rmtree(dest)
+                            shutil.copytree(
+                                skill_path,
+                                dest,
+                                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+                            )
+                            console.print(f"[green]✓ Installed:[/green] {skill_name}")
+                            installed += 1
+                        except Exception as e:
+                            console.print(f"[red]✗ Error installing {skill_name}: {e}[/red]")
+                            errors += 1
+
+            console.print(
+                f"\n[bold]Results:[/bold] {installed} installed, {skipped} skipped, {errors} errors"
+            )
+
+            if installed > 0:
+                console.print(
+                    "\n[dim]Use 'skillboard link -o <agent>' to enable installed skills[/dim]"
+                )
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        return
 
 
 def main() -> None:

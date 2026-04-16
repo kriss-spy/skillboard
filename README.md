@@ -16,6 +16,7 @@ A lightweight skill management utility for AI coding agents. Toggle skills on/of
 - 🔧 **Configurable Paths** - Customize skill directories via config file
 - 📋 **Copy & Move** - Copy or move skills between directories
 - 👁️ **Read Skills** - View skill content without opening an editor
+- 📦 **Install from GitHub** - Install skills directly from GitHub repos
 
 ## Installation
 
@@ -80,7 +81,17 @@ skillboard link -i ~/.agents/skill-warehouse -o ~/.claude/skills
 skillboard link -o claude --no-tui
 ```
 
-### 4. Copy or move skills
+### 4. Install skills from GitHub
+
+```bash
+# Install a skill from GitHub to your warehouse
+skillboard install anthropic/docx -o warehouse
+
+# Install from Vercel Labs skills collection
+skillboard install vercel-labs/skills -o warehouse --subpath skills
+```
+
+### 5. Copy or move skills
 
 ```bash
 # Copy skills from warehouse to agent (interactive selection)
@@ -229,6 +240,42 @@ skillboard move -i warehouse -o agent --force
 - `--all`: Move all skills without interactive selection
 - `--dry-run`: Show what would be moved without actually moving
 - `--force`: Overwrite existing skills in target without prompting
+
+### `install`
+
+Install skills from a GitHub repository. Automatically downloads and extracts skills to your warehouse.
+
+**Install from GitHub (owner/repo format):**
+```bash
+# Install a single skill repo
+skillboard install anthropic/docx -o warehouse
+
+# Install from Vercel Labs skills collection
+skillboard install vercel-labs/skills -o warehouse --subpath skills
+
+# Install from a specific branch
+skillboard install anthropic/docx -o warehouse --branch main
+
+# Install with force (overwrite existing)
+skillboard install anthropic/docx -o warehouse --force
+```
+
+**Install from full GitHub URL:**
+```bash
+skillboard install https://github.com/anthropic/docx -o warehouse
+```
+
+**Auto-detection:**
+The install command automatically detects:
+- Single skill repos (contain SKILL.md in root)
+- Multi-skill repos with `skills/` subdirectory
+- Custom subpaths via `--subpath`
+
+**Options:**
+- `-o, --output`: Target agent or path (default: warehouse)
+- `--branch`: Git branch to install from (default: main)
+- `--subpath`: Subpath within repo where skills are located
+- `--force`: Overwrite existing skills
 
 ### `read`
 
