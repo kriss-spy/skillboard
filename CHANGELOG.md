@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-15
+
+### Added
+- New `install` command to fetch skills from GitHub repositories
+  - Supports `owner/repo` format: `skillboard install anthropic/docx`
+  - Supports full GitHub URLs: `skillboard install https://github.com/anthropic/docx`
+  - Custom subpath support for repos like `vercel-labs/skills`
+  - Auto-detects single skill vs multi-skill repositories
+  - Downloads and extracts with progress indicators
+  - Force flag to overwrite existing skills
+  - Defaults to installing to warehouse
+
 ## [1.0.1] - 2026-04-15
 
 ### Fixed
