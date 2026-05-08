@@ -223,14 +223,14 @@ def list(agent: Optional[str]) -> None:
     Examples:
         skillboard list           # Show all .agent skills (global + local)
         skillboard list claude    # Show Claude skills (~/.claude/skills + ./claude/skills)
-        skillboard list agent     # Show agent skills (~/.agent/skills + ./agent/skills)
+        skillboard list agent     # Show agent skills (~/.agents/skills + ./agents/skills)
         skillboard list gemini    # Show Gemini skills (~/.gemini/skills + ./gemini/skills)
     """
     config = get_config()
 
     if agent is None:
         # Default: show .agent skills (warehouse + local)
-        _list_skills_from_locations("Agent Skills", config.paths.agent, Path(".agent/skills"))
+        _list_skills_from_locations("Agent Skills", config.paths.agent, Path(".agents/skills"))
     else:
         # Show skills for specific agent
         agent_lower = agent.lower()
