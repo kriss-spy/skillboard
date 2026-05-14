@@ -948,6 +948,124 @@ def install(
         return
 
 
+@cli.command()
+@click.argument("agent", required=False)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be cleaned without actually removing.",
+)
+@click.option(
+    "--all",
+    "cleanup_all",
+    is_flag=True,
+    help="Remove all orphaned skills without interactive confirmation.",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+def cleanup(agent: Optional[str], dry_run: bool, cleanup_all: bool, scope: str) -> None:
+    """Remove orphaned symlinks from target directory.
+
+    Orphaned skills are symlinks that point to non-existent source directories.
+    This commonly happens when a skill is deleted from the warehouse but the
+    symlink remains in the agent's skills directory.
+
+    \b
+    Examples:
+        skillboard cleanup                    # Clean default agent skills
+        skillboard cleanup claude             # Clean Claude skills
+        skillboard cleanup --dry-run          # Preview what would be removed
+        skillboard cleanup --all              # Remove without confirmation
+        skillboard cleanup claude --scope local  # Clean local Claude skills
+    """
+    config = get_config()
+
+    # Resolve target path
+    if agent is None:
+        target = config.paths.agent if scope == "global" else Path("./.agents/skills")
+    else:
+        agent_lower = agent.lower()
+        if agent_lower in config.paths.list_paths():
+            if scope == "local":
+                target = Path(f"./.{agent_lower}/skills")
+            else:
+                target = config.paths.get_path(agent_lower)
+        else:
+            console.print(f"[red]Unknown agent: {agent}[/red]")
+            console.print(f"Available: {', '.join(config.paths.list_paths().keys())}")
+            return
+
+    if not target.exists():
+        console.print(f"[yellow]Directory does not exist: {target}[/yellow]")
+        return
+
+    # Find orphaned skills
+    # For cleanup, source_path is the warehouse (to detect orphaned symlinks)
+    manager = SkillManager(config.paths.warehouse, target)
+    orphaned = manager.find_orphaned_skills()
+
+    if not orphaned:
+        console.print(f"[green]No orphaned skills found in {target}[/green]")
+        return
+
+    console.print(f"\n[bold]Found {len(orphaned)} orphaned skill(s) in {target}:[/bold]\n")
+    for skill in orphaned:
+        try:
+            resolved = skill.path.resolve()
+            console.print(f"  • [cyan]{skill.name}[/cyan] → [dim]{resolved} (missing)[/dim]")
+        except (OSError, RuntimeError):
+            console.print(f"  • [cyan]{skill.name}[/cyan] → [dim](broken symlink)[/dim]")
+
+    if dry_run:
+        console.print("\n[dim]No changes made (dry run).[/dim]")
+        return
+
+    # Confirm unless --all
+    if not cleanup_all:
+        try:
+            import inquirer
+        except ImportError:
+            console.print(
+                "[red]Error: 'inquirer' package is required for interactive mode.[/red]"
+            )
+            console.print("Install with: pip install inquirer")
+            return
+
+        try:
+            confirm_q = [
+                inquirer.Confirm(
+                    "confirm",
+                    message=f"Remove {len(orphaned)} orphaned skill(s)?",
+                    default=False,
+                )
+            ]
+            confirm_a = inquirer.prompt(confirm_q)
+            if not confirm_a or not confirm_a["confirm"]:
+                console.print("\n[yellow]Cancelled.[/yellow]")
+                return
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Cancelled.[/yellow]")
+            return
+
+    # Remove orphaned skills
+    console.print("\n[bold]Removing orphaned skills...[/bold]\n")
+    removed = 0
+    errors = 0
+
+    for skill in orphaned:
+        if manager.remove_orphaned_skill(skill.name):
+            console.print(f"[green]✓ Removed:[/green] {skill.name}")
+            removed += 1
+        else:
+            errors += 1
+
+    console.print(f"\n[bold]Results:[/bold] {removed} removed, {errors} errors")
+
+
 def main() -> None:
     """Main entry point."""
     cli()

@@ -5,6 +5,10 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from rich.console import Console
+
+console: Console = Console()
+
 
 def get_skill_content_hash(skill_path: Path) -> str:
     """Calculate SHA256 hash of skill directory contents.
@@ -190,7 +194,7 @@ class SkillManager:
 
         # Check if source exists
         if not source_skill.exists():
-            print(f"Error: Skill '{skill_name}' not found in warehouse")
+            console.print(f"[red]Error: Skill '{skill_name}' not found in warehouse[/red]")
             return False
 
         # Check if already enabled
@@ -198,7 +202,7 @@ class SkillManager:
             if target_skill.is_symlink():
                 return True  # Already enabled, not an error
             else:
-                print(f"Error: '{skill_name}' exists in target but is not a symlink")
+                console.print(f"[red]Error: '{skill_name}' exists in target but is not a symlink[/red]")
                 return False
 
         try:
@@ -207,7 +211,7 @@ class SkillManager:
             target_skill.symlink_to(absolute_source, target_is_directory=True)
             return True
         except Exception as e:
-            print(f"Error enabling skill '{skill_name}': {e}")
+            console.print(f"[red]Error enabling skill '{skill_name}': {e}[/red]")
             return False
 
     def disable_skill(self, skill_name: str) -> bool:
@@ -227,14 +231,14 @@ class SkillManager:
 
         # Only remove if it's a symlink
         if not target_skill.is_symlink():
-            print(f"Error: '{skill_name}' is not a symlink, won't remove")
+            console.print(f"[yellow]Warning: '{skill_name}' is not a symlink, won't remove[/yellow]")
             return False
 
         try:
             target_skill.unlink()
             return True
         except Exception as e:
-            print(f"Error disabling skill '{skill_name}': {e}")
+            console.print(f"[red]Error disabling skill '{skill_name}': {e}[/red]")
             return False
 
     def apply_changes(self, enabled_skills: set[str]) -> tuple[list[str], list[str]]:
@@ -302,6 +306,73 @@ class SkillManager:
                         )
                     )
         return skills
+
+    def find_orphaned_skills(self) -> list[Skill]:
+        """Find orphaned symlinks in the target directory.
+
+        An orphaned skill is a symlink in the target that points to a
+        non-existent path (the source skill has been removed).
+
+        Returns:
+            List of orphaned Skill objects
+        """
+        orphaned: list[Skill] = []
+        if not self.target_path.exists():
+            return orphaned
+
+        for item in self.target_path.iterdir():
+            if item.name.startswith("."):
+                continue
+
+            if item.is_symlink():
+                try:
+                    resolved = item.resolve()
+                    if not resolved.exists():
+                        orphaned.append(
+                            Skill(
+                                name=item.name,
+                                path=item,
+                                is_enabled=True,
+                                is_symlink=True,
+                            )
+                        )
+                except (OSError, RuntimeError):
+                    # Broken symlink or permission error
+                    orphaned.append(
+                        Skill(
+                            name=item.name,
+                            path=item,
+                            is_enabled=True,
+                            is_symlink=True,
+                        )
+                    )
+
+        return sorted(orphaned, key=lambda s: s.name.lower())
+
+    def remove_orphaned_skill(self, skill_name: str) -> bool:
+        """Remove an orphaned symlink from the target directory.
+
+        Args:
+            skill_name: Name of the orphaned skill to remove
+
+        Returns:
+            True if successfully removed, False otherwise
+        """
+        target_skill = self.target_path / skill_name
+
+        if not target_skill.exists():
+            return True  # Already gone
+
+        if not target_skill.is_symlink():
+            console.print(f"[yellow]Warning: '{skill_name}' is not a symlink, skipping[/yellow]")
+            return False
+
+        try:
+            target_skill.unlink()
+            return True
+        except Exception as e:
+            console.print(f"[red]Error removing orphaned skill '{skill_name}': {e}[/red]")
+            return False
 
     def move_skill(self, skill_name: str, force: bool = False) -> tuple[bool, str]:
         """Move a skill from source to target with rollback support.

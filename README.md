@@ -16,6 +16,7 @@ A lightweight skill management utility for AI coding agents. Toggle skills on/of
 - 🔧 **Configurable Paths** - Customize skill directories via config file
 - 📋 **Copy & Move** - Copy or move skills between directories
 - 👁️ **Read Skills** - View skill content without opening an editor
+- 🧹 **Cleanup Orphaned Links** - Remove broken symlinks when skills are deleted
 - 📦 **Install from GitHub** - Install skills directly from GitHub repos
 
 ## Installation
@@ -105,6 +106,22 @@ skillboard move -i warehouse -o agent
 
 # Preview what would be moved
 skillboard move -i warehouse -o agent --dry-run
+```
+
+### 6. Clean up orphaned symlinks
+
+```bash
+# Clean default agent skills
+skillboard cleanup
+
+# Clean specific agent skills
+skillboard cleanup claude
+
+# Preview what would be removed
+skillboard cleanup --dry-run
+
+# Remove without confirmation
+skillboard cleanup --all
 ```
 
 ## Commands
@@ -276,6 +293,33 @@ The install command automatically detects:
 - `--branch`: Git branch to install from (default: main)
 - `--subpath`: Subpath within repo where skills are located
 - `--force`: Overwrite existing skills
+
+### `cleanup`
+
+Remove orphaned symlinks from target directories. Orphaned skills are symlinks that point to source directories which no longer exist (commonly after deleting a skill from the warehouse).
+
+**Basic usage:**
+```bash
+skillboard cleanup                    # Clean default agent skills
+skillboard cleanup claude             # Clean Claude skills
+skillboard cleanup --scope local      # Clean local skills
+```
+
+**Preview before cleaning:**
+```bash
+skillboard cleanup --dry-run          # Show what would be removed
+```
+
+**Skip confirmation:**
+```bash
+skillboard cleanup --all              # Remove without prompting
+```
+
+**Options:**
+- `agent`: Agent to clean (claude, agent, gemini, opencode, antigravity)
+- `--scope`: `global` or `local`
+- `--dry-run`: Preview without removing
+- `--all`: Remove all without confirmation
 
 ### `read`
 

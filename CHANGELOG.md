@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-12
+
+### Added
+- New `cleanup` command to remove orphaned symlinks
+  - Detects broken symlinks pointing to deleted source skills
+  - Supports `--dry-run` to preview what would be removed
+  - Supports `--all` to skip confirmation prompt
+  - Works with any agent and both global/local scopes
+- Python 3.14 support
+  - Added classifier to `pyproject.toml`
+  - All 82 tests pass on Python 3.14.4
+
+### Fixed
+- Eliminated all bare `print()` statements across the codebase
+  - `manager.py`: error/warning messages now use `console.print()` with Rich styling
+  - `config.py`: config load/save warnings now use `console.print()` with Rich styling
+  - Consistent with the error handling module introduced in v1.0.0
+
+### Changed
+- Expanded test suite from 55 to 82 tests (+27 tests)
+  - Added comprehensive tests for `cleanup` command (14 tests)
+  - Added tests for `read` command (8 tests)
+  - Added tests for `copy` command (4 tests)
+  - Better CLI test coverage with proper config mocking
+
 ## [1.1.0] - 2026-04-15
 
 ### Added
