@@ -15,6 +15,7 @@ A lightweight skill management utility for AI coding agents. Toggle skills on/of
 - 🎨 **Beautiful Output** - Rich terminal tables and colored output
 - 🔧 **Configurable Paths** - Customize skill directories via config file
 - 📋 **Copy & Move** - Copy or move skills between directories
+- 🗑️ **Remove** - Delete skills from agent directories
 - 👁️ **Read Skills** - View skill content without opening an editor
 - 🧹 **Cleanup Orphaned Links** - Remove broken symlinks when skills are deleted
 - 📝 **Skill Descriptions** - Auto-extract descriptions from SKILL.md frontmatter
@@ -109,7 +110,23 @@ skillboard move -i warehouse -o agent
 skillboard move -i warehouse -o agent --dry-run
 ```
 
-### 6. Clean up orphaned symlinks
+### 6. Remove skills
+
+```bash
+# Remove skills from agent (interactive selection)
+skillboard remove -o claude
+
+# Remove all skills without selection
+skillboard remove -o claude --all
+
+# Preview what would be removed
+skillboard remove -o claude --dry-run
+
+# Remove from local scope
+skillboard remove -o agent --output-scope local
+```
+
+### 7. Clean up orphaned symlinks
 
 ```bash
 # Clean default agent skills
@@ -258,6 +275,35 @@ skillboard move -i warehouse -o agent --force
 - `--all`: Move all skills without interactive selection
 - `--dry-run`: Show what would be moved without actually moving
 - `--force`: Overwrite existing skills in target without prompting
+
+### `remove`
+
+Delete skills from a target directory. **Use with caution** - this permanently deletes skills.
+
+**Interactive mode (default):**
+```bash
+# Remove skills from claude (interactive selection)
+skillboard remove -o claude
+
+# Remove skills from agent
+skillboard remove -o agent
+```
+
+**Remove all without selection:**
+```bash
+skillboard remove -o claude --all
+```
+
+**Preview before removing:**
+```bash
+skillboard remove -o claude --dry-run
+```
+
+**Options:**
+- `-o, --output`: Target agent or path (required)
+- `--output-scope`: `global` or `local`
+- `--all`: Remove all skills without interactive selection
+- `--dry-run`: Show what would be removed without actually removing
 
 ### `install`
 

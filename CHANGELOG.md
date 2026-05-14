@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-05-14
+
+### Added
+- New `remove` command to delete skills from target directories
+  - Interactive selection with checkbox TUI (like move/copy)
+  - `--all` flag to remove all skills without selection
+  - `--dry-run` flag to preview what would be removed
+  - Supports both global and local scopes
+  - Safety confirmation prompt before deletion
+  - Properly handles symlinks (unlinks) and directories (rmtree)
+- 6 tests for remove command (all, dry-run, empty target, symlink, nonexistent dir)
+
 ## [1.3.1] - 2026-05-14
 
 ### Fixed

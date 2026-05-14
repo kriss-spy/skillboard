@@ -653,6 +653,152 @@ def move(
 
 
 @cli.command()
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=str,
+    help="Target agent (claude, agent, gemini, opencode, antigravity, warehouse).",
+)
+@click.option(
+    "--output-scope",
+    type=click.Choice(["global", "local"], case_sensitive=False),
+    default="global",
+    help="Scope: global (~/.<agent>/skills) or local (./.<agent>/skills).",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be removed without actually removing.",
+)
+@click.option(
+    "--all",
+    is_flag=True,
+    help="Remove all skills without interactive selection.",
+)
+def remove(
+    output_path: Optional[str],
+    output_scope: str,
+    dry_run: bool,
+    all: bool,
+) -> None:
+    """Remove skills from a target directory.
+
+    Interactive by default - use --all to remove all skills without selection.
+    Use with caution - this permanently deletes skills.
+
+    \b
+    Examples:
+        skillboard remove -o claude                    # Interactive select
+        skillboard remove -o claude --all              # Remove all
+        skillboard remove -o agent --output-scope local # Remove from local
+        skillboard remove -o claude --dry-run          # Preview what would remove
+    """
+    from .tui import select_skills_interactive
+
+    config = get_config()
+
+    # Resolve target path
+    target_path = resolve_target_path(output_path, output_scope, config.paths)
+    if not target_path.exists():
+        console.print(f"[yellow]Directory does not exist: {target_path}[/yellow]")
+        return
+
+    # Get skills from target (we're deleting from here)
+    manager = SkillManager(target_path, target_path)
+    skills = manager.get_target_skills()
+
+    if not skills:
+        console.print(f"[yellow]No skills found in {target_path}[/yellow]")
+        return
+
+    # Select skills interactively unless --all is specified
+    if all:
+        selected_skills = {skill.name for skill in skills}
+        console.print(f"[dim]Removing all {len(selected_skills)} skills...[/dim]\n")
+    else:
+        selected = select_skills_interactive(
+            skills,
+            target_path,
+            operation="remove",
+        )
+        if selected is None:
+            return
+        selected_skills = selected
+        if not selected_skills:
+            console.print("\n[yellow]No skills selected.[/yellow]")
+            return
+
+    # Dry run check
+    if dry_run:
+        console.print("\n[bold]Dry Run - Would remove:[/bold]")
+        for skill_name in sorted(selected_skills):
+            console.print(f"  • {skill_name}")
+        console.print("\n[dim]No changes made.[/dim]")
+        return
+
+    # Safety confirmation (skip if --all was explicitly passed)
+    if all:
+        console.print(
+            f"\n[yellow]⚠️  Warning: Removing {len(selected_skills)} skill(s) "
+            f"from {target_path}[/yellow]"
+        )
+    else:
+        console.print(
+            f"\n[yellow]⚠️  Warning: This will PERMANENTLY DELETE skills from {target_path}[/yellow]"
+        )
+
+        try:
+            import inquirer
+        except ImportError:
+            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
+            console.print("Install with: pip install inquirer")
+            return
+
+        try:
+            confirm_q = [
+                inquirer.Confirm(
+                    "confirm",
+                    message=f"Remove {len(selected_skills)} skill(s)?",
+                    default=False,
+                )
+            ]
+            confirm_a = inquirer.prompt(confirm_q)
+            if not confirm_a or not confirm_a["confirm"]:
+                console.print("\n[yellow]Cancelled.[/yellow]")
+                return
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Cancelled.[/yellow]")
+            return
+
+    # Perform removal
+    removed = 0
+    errors = 0
+
+    console.print("\n[bold]Removing skills...[/bold]\n")
+
+    for skill in skills:
+        if skill.name not in selected_skills:
+            continue
+
+        skill_path = target_path / skill.name
+        try:
+            if skill_path.is_symlink():
+                skill_path.unlink()
+            elif skill_path.is_dir():
+                shutil.rmtree(skill_path)
+            else:
+                skill_path.unlink()
+            console.print(f"[green]✓ Removed:[/green] {skill.name}")
+            removed += 1
+        except Exception as e:
+            console.print(f"[red]✗ Error removing {skill.name}: {e}[/red]")
+            errors += 1
+
+    console.print(f"\n[bold]Results:[/bold] {removed} removed, {errors} errors")
+
+
+@cli.command()
 @click.argument("skill_name")
 @click.option(
     "-a",
