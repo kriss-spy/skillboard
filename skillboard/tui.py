@@ -47,23 +47,29 @@ def select_skills_interactive(
     if target_path:
         console.print(f"[bold]Target directory:[/bold] {target_path}")
 
-    # Show skills with descriptions in a table
-    from rich.table import Table
-
-    table = Table(title=f"Skills ({len(skills)} available)", show_header=True)
-    table.add_column("Name", style="green", no_wrap=True)
-    table.add_column("Description", style="dim")
-
-    for skill in skills:
-        desc = skill.description or "[dim]-[/dim]"
-        table.add_row(skill.name, desc)
-
-    console.print(table)
     console.print()
 
-    # Prepare choices with "[Select All]" option
-    skill_names = [skill.name for skill in skills]
-    choices = ["[Select All]"] + skill_names
+    # Build choices with descriptions embedded inline
+    max_name_len = max(len(s.name) for s in skills) if skills else 0
+    name_width = max(max_name_len, 12)
+
+    choices: list[str] = ["[Select All]"]
+    choice_to_name: dict[str, str] = {}
+    skill_names: list[str] = []
+    for skill in skills:
+        skill_names.append(skill.name)
+        pad = " " * (name_width - len(skill.name))
+        if skill.description:
+            # Truncate description to fit reasonably on one line
+            desc = skill.description
+            max_desc = 60
+            if len(desc) > max_desc:
+                desc = desc[: max_desc - 3].rstrip() + "..."
+            choice = f"{skill.name}{pad}  {desc}"
+        else:
+            choice = skill.name
+        choices.append(choice)
+        choice_to_name[choice] = skill.name
 
     # Determine default selection:
     # - If preselected is explicitly provided (even if empty), use it
@@ -93,15 +99,17 @@ def select_skills_interactive(
         console.print("\n[yellow]Cancelled.[/yellow]")
         return None
 
-    selected = set(answers["selected"])
+    raw_selected = set(answers["selected"])
 
-    # Handle "[Select All]" option
-    if "[Select All]" in selected:
+    # Handle "[Select All]" option and map choices back to skill names
+    if "[Select All]" in raw_selected:
         selected = set(skill_names)
         console.print(f"\n[dim]All {len(selected)} skills selected[/dim]")
-    elif not selected:
+    elif not raw_selected:
         console.print("\n[dim]No skills selected.[/dim]")
         return set()
+    else:
+        selected = {choice_to_name[c] for c in raw_selected}
 
     return selected
 
