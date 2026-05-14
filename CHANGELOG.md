@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-05-14
+
+### Fixed
+- Skill descriptions now appear inline inside checkbox choices (not in a separate table)
+  - Matches OpenCode's skills menu UX: description lives in the select menu itself
+  - Choices are padded so descriptions align neatly
+- Fixed ruff formatting and lint errors from v1.3.0
+  - Removed unused `dataclasses.field` import
+  - Wrapped long console.print lines
+
 ## [1.3.0] - 2026-05-14
 
 ### Added
