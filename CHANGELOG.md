@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-14
+
+### Added
+- Skill descriptions auto-extracted from SKILL.md YAML frontmatter
+  - `link --verbose` now shows a Description column in the skills table
+  - Interactive TUI (link/copy/move) displays a Name + Description table before selection
+  - Descriptions are read from the `description` field in YAML frontmatter
+  - Long descriptions are truncated to 80 characters with ellipsis
+  - Supports quoted, unquoted, and multiline folded YAML strings
+- 7 new tests for description extraction covering all edge cases
+
 ## [1.2.0] - 2026-05-12
 
 ### Added

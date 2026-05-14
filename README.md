@@ -17,6 +17,7 @@ A lightweight skill management utility for AI coding agents. Toggle skills on/of
 - 📋 **Copy & Move** - Copy or move skills between directories
 - 👁️ **Read Skills** - View skill content without opening an editor
 - 🧹 **Cleanup Orphaned Links** - Remove broken symlinks when skills are deleted
+- 📝 **Skill Descriptions** - Auto-extract descriptions from SKILL.md frontmatter
 - 📦 **Install from GitHub** - Install skills directly from GitHub repos
 
 ## Installation

@@ -2,12 +2,56 @@
 
 import hashlib
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
 from rich.console import Console
 
 console: Console = Console()
+
+
+def get_skill_description(skill_path: Path, max_length: int = 80) -> str:
+    """Extract description from a skill's SKILL.md frontmatter.
+
+    Reads the YAML frontmatter (delimited by ---) and returns the
+    value of the 'description' field, truncated to max_length.
+
+    Args:
+        skill_path: Path to the skill directory
+        max_length: Maximum length of the returned description
+
+    Returns:
+        Description string, or empty string if not found
+    """
+    skill_md = skill_path / "SKILL.md"
+    if not skill_md.exists():
+        return ""
+
+    try:
+        content = skill_md.read_text(encoding="utf-8")
+        if not content.startswith("---"):
+            return ""
+
+        # Find end of frontmatter
+        end = content.find("\n---", 3)
+        if end == -1:
+            return ""
+
+        frontmatter = content[3:end]
+        data = yaml.safe_load(frontmatter) or {}
+        desc = data.get("description", "")
+
+        # Handle multiline/folded YAML strings
+        if isinstance(desc, str):
+            desc = " ".join(desc.split())
+            if len(desc) > max_length:
+                desc = desc[: max_length - 3].rstrip() + "..."
+            return desc
+    except Exception:
+        pass
+
+    return ""
 
 
 def get_skill_content_hash(skill_path: Path) -> str:
@@ -90,12 +134,14 @@ class Skill:
         path: Path to the skill directory
         is_enabled: Whether the skill is currently enabled (symlinked)
         is_symlink: Whether the skill is enabled as a symlink
+        description: Short description from SKILL.md frontmatter
     """
 
     name: str
     path: Path
     is_enabled: bool = False
     is_symlink: bool = False
+    description: str = ""
 
     def __str__(self) -> str:
         status = "✓" if self.is_enabled else "✗"
@@ -136,8 +182,15 @@ class SkillManager:
         if self.source_path.exists():
             for item in sorted(self.source_path.iterdir()):
                 if item.is_dir() and not item.name.startswith("."):
+                    desc = get_skill_description(item)
                     skills.append(
-                        Skill(name=item.name, path=item, is_enabled=False, is_symlink=False)
+                        Skill(
+                            name=item.name,
+                            path=item,
+                            is_enabled=False,
+                            is_symlink=False,
+                            description=desc,
+                        )
                     )
 
         # Check which skills are enabled in target
@@ -168,6 +221,7 @@ class SkillManager:
                                     path=target_full_path,
                                     is_enabled=True,
                                     is_symlink=True,
+                                    description="",
                                 )
                             )
                 elif target_full_path.is_dir():
@@ -280,8 +334,15 @@ class SkillManager:
         if self.source_path.exists():
             for item in sorted(self.source_path.iterdir()):
                 if item.is_dir() and not item.name.startswith("."):
+                    desc = get_skill_description(item)
                     skills.append(
-                        Skill(name=item.name, path=item, is_enabled=False, is_symlink=False)
+                        Skill(
+                            name=item.name,
+                            path=item,
+                            is_enabled=False,
+                            is_symlink=False,
+                            description=desc,
+                        )
                     )
         return skills
 
@@ -334,6 +395,7 @@ class SkillManager:
                                 path=item,
                                 is_enabled=True,
                                 is_symlink=True,
+                                description="",
                             )
                         )
                 except (OSError, RuntimeError):
@@ -344,6 +406,7 @@ class SkillManager:
                             path=item,
                             is_enabled=True,
                             is_symlink=True,
+                            description="",
                         )
                     )
 

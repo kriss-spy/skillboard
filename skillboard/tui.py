@@ -47,20 +47,18 @@ def select_skills_interactive(
     if target_path:
         console.print(f"[bold]Target directory:[/bold] {target_path}")
 
-    # Show compact summary
-    console.print(f"\n[bold]Summary:[/bold] {len(skills)} skills available\n")
+    # Show skills with descriptions in a table
+    from rich.table import Table
 
-    # Show first 10 skills as compact list
-    if len(skills) <= 10:
-        console.print("[dim]Available skills:[/dim]")
-        for skill in skills:
-            console.print(f"  • {skill.name}")
-    else:
-        console.print("[dim]First 10 skills:[/dim]")
-        for skill in skills[:10]:
-            console.print(f"  • {skill.name}")
-        console.print(f"[dim]  ... and {len(skills) - 10} more[/dim]")
+    table = Table(title=f"Skills ({len(skills)} available)", show_header=True)
+    table.add_column("Name", style="green", no_wrap=True)
+    table.add_column("Description", style="dim")
 
+    for skill in skills:
+        desc = skill.description or "[dim]-[/dim]"
+        table.add_row(skill.name, desc)
+
+    console.print(table)
     console.print()
 
     # Prepare choices with "[Select All]" option

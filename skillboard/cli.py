@@ -150,18 +150,20 @@ def link(
         available_count = len(skills) - enabled_count
 
         if verbose_mode:
-            # Show full table
+            # Show full table with descriptions
             table = Table(title=f"Skills: {source} → {target}")
-            table.add_column("Status", justify="center", style="cyan")
-            table.add_column("Name", style="green")
-            table.add_column("Type", style="yellow")
+            table.add_column("Status", justify="center", style="cyan", no_wrap=True)
+            table.add_column("Name", style="green", no_wrap=True)
+            table.add_column("Type", style="yellow", no_wrap=True)
+            table.add_column("Description", style="dim")
 
             for skill in skills:
                 status = "✓" if skill.is_enabled else "✗"
                 link_type = (
                     "symlink" if skill.is_symlink else ("directory" if skill.is_enabled else "-")
                 )
-                table.add_row(status, skill.name, link_type)
+                desc = skill.description or "[dim]-[/dim]"
+                table.add_row(status, skill.name, link_type, desc)
 
             console.print(table)
         else:

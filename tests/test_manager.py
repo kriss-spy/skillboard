@@ -274,6 +274,117 @@ class TestContentHash:
         assert are_skills_identical(skill1, skill2) is False
 
 
+class TestSkillDescription:
+    """Tests for description extraction from SKILL.md."""
+
+    def test_get_skill_description_from_frontmatter(self, tmp_path):
+        """Test extracting description from YAML frontmatter."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "test-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: test-skill\n"
+            "description: A test skill for unit testing\n"
+            "---\n"
+            "# Test Skill\n"
+        )
+
+        desc = get_skill_description(skill_dir)
+        assert desc == "A test skill for unit testing"
+
+    def test_get_skill_description_quoted(self, tmp_path):
+        """Test extracting quoted description."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "quoted-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            '---\n'
+            'name: quoted-skill\n'
+            'description: "A quoted description here"\n'
+            '---\n'
+        )
+
+        desc = get_skill_description(skill_dir)
+        assert desc == "A quoted description here"
+
+    def test_get_skill_description_multiline(self, tmp_path):
+        """Test extracting multiline folded description."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "multi-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: multi-skill\n"
+            "description: >\n"
+            "  This is a long description that spans\n"
+            "  multiple lines in the YAML frontmatter.\n"
+            "---\n"
+        )
+
+        desc = get_skill_description(skill_dir)
+        assert "This is a long description" in desc
+        assert "\n" not in desc  # Should be folded to single line
+
+    def test_get_skill_description_truncation(self, tmp_path):
+        """Test that long descriptions are truncated."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "long-skill"
+        skill_dir.mkdir()
+        long_desc = "A" * 100
+        (skill_dir / "SKILL.md").write_text(
+            f"---\n"
+            f"name: long-skill\n"
+            f"description: {long_desc}\n"
+            f"---\n"
+        )
+
+        desc = get_skill_description(skill_dir, max_length=50)
+        assert len(desc) <= 50
+        assert desc.endswith("...")
+
+    def test_get_skill_description_no_skill_md(self, tmp_path):
+        """Test with missing SKILL.md."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "no-md"
+        skill_dir.mkdir()
+
+        desc = get_skill_description(skill_dir)
+        assert desc == ""
+
+    def test_get_skill_description_no_frontmatter(self, tmp_path):
+        """Test with SKILL.md but no frontmatter."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "no-front"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("# Just a title\n\nNo frontmatter here.\n")
+
+        desc = get_skill_description(skill_dir)
+        assert desc == ""
+
+    def test_get_skill_description_no_description_field(self, tmp_path):
+        """Test with frontmatter but no description field."""
+        from skillboard.manager import get_skill_description
+
+        skill_dir = tmp_path / "no-desc"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "---\n"
+            "name: no-desc\n"
+            "version: 1.0\n"
+            "---\n"
+        )
+
+        desc = get_skill_description(skill_dir)
+        assert desc == ""
+
+
 class TestSkillCounting:
     """Tests for skill counting functionality."""
 
