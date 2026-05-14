@@ -2,7 +2,7 @@
 
 import hashlib
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -256,7 +256,9 @@ class SkillManager:
             if target_skill.is_symlink():
                 return True  # Already enabled, not an error
             else:
-                console.print(f"[red]Error: '{skill_name}' exists in target but is not a symlink[/red]")
+                console.print(
+                    f"[red]Error: '{skill_name}' exists in target but is not a symlink[/red]"
+                )
                 return False
 
         try:
@@ -285,7 +287,9 @@ class SkillManager:
 
         # Only remove if it's a symlink
         if not target_skill.is_symlink():
-            console.print(f"[yellow]Warning: '{skill_name}' is not a symlink, won't remove[/yellow]")
+            console.print(
+                f"[yellow]Warning: '{skill_name}' is not a symlink, won't remove[/yellow]"
+            )
             return False
 
         try:

@@ -93,7 +93,9 @@ class Config:
                     if hasattr(self.paths, key):
                         setattr(self.paths, key, Path(value))
         except Exception as e:
-            console.print(f"[yellow]Warning: Failed to load config from {self.CONFIG_FILE}: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Failed to load config from {self.CONFIG_FILE}: {e}[/yellow]"
+            )
 
     def save_config(self) -> None:
         """Save current configuration to file."""
@@ -105,7 +107,9 @@ class Config:
             with open(self.CONFIG_FILE, "w", encoding="utf-8") as f:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=True)
         except Exception as e:
-            console.print(f"[yellow]Warning: Failed to save config to {self.CONFIG_FILE}: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Failed to save config to {self.CONFIG_FILE}: {e}[/yellow]"
+            )
 
 
 # Global config instance

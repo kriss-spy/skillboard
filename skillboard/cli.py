@@ -1031,9 +1031,7 @@ def cleanup(agent: Optional[str], dry_run: bool, cleanup_all: bool, scope: str) 
         try:
             import inquirer
         except ImportError:
-            console.print(
-                "[red]Error: 'inquirer' package is required for interactive mode.[/red]"
-            )
+            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
             console.print("Install with: pip install inquirer")
             return
 
