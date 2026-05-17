@@ -1,12 +1,13 @@
-"""Interactive CLI interface for skillboard using inquirer.
+"""Interactive CLI interface for skillboard using questionary.
 
-Provides a simple checkbox-based interface for selecting which skills to enable.
+Provides a searchable checkbox-based interface for selecting which skills to enable.
 """
 
-import sys
 from pathlib import Path
 from typing import Any, Optional
 
+import questionary
+from questionary import Choice
 from rich.console import Console
 
 console: Console = Console()
@@ -19,7 +20,7 @@ def select_skills_interactive(
     operation: str = "link",
     preselected: Optional[set[str]] = None,
 ) -> Optional[set[str]]:
-    """Interactive skill selection with TUI.
+    """Interactive skill selection with searchable TUI.
 
     Args:
         skills: List of Skill objects to select from
@@ -31,13 +32,6 @@ def select_skills_interactive(
     Returns:
         Set of selected skill names, or None if cancelled
     """
-    try:
-        import inquirer
-    except ImportError:
-        console.print("[red]Error: 'inquirer' package is required.[/red]")
-        console.print("Install it with: pip install inquirer")
-        sys.exit(1)
-
     if not skills:
         console.print(f"[yellow]No skills found in {source_path}[/yellow]")
         return set()
@@ -49,73 +43,50 @@ def select_skills_interactive(
 
     console.print()
 
-    # Build choices with descriptions embedded inline
-    max_name_len = max(len(s.name) for s in skills) if skills else 0
-    name_width = max(max_name_len, 12)
-
-    choices: list[str] = ["[Select All]"]
-    choice_to_name: dict[str, str] = {}
-    skill_names: list[str] = []
+    # Build choices with descriptions and preselection via Choice objects
+    choices: list[Choice] = []
     for skill in skills:
-        skill_names.append(skill.name)
-        pad = " " * (name_width - len(skill.name))
         if skill.description:
-            # Truncate description to fit reasonably on one line
             desc = skill.description
             max_desc = 60
             if len(desc) > max_desc:
                 desc = desc[: max_desc - 3].rstrip() + "..."
-            choice = f"{skill.name}{pad}  {desc}"
+            title = f"{skill.name}  {desc}"
         else:
-            choice = skill.name
-        choices.append(choice)
-        choice_to_name[choice] = skill.name
+            title = skill.name
 
-    # Determine default selection:
-    # - If preselected is explicitly provided (even if empty), use it
-    # - If preselected is None (not provided), default to empty (no selection)
-    if preselected is None:
-        default_selection = []
-    else:
-        default_selection = list(preselected)
+        checked = preselected is not None and skill.name in preselected
+        choices.append(Choice(title=title, value=skill.name, checked=checked))
 
-    # Ask user to select skills
-    questions = [
-        inquirer.Checkbox(
-            "selected",
-            message=f"Select skills to {operation} (space: toggle, enter: confirm)",
-            choices=choices,
-            default=default_selection,
-        ),
-    ]
-
+    # Ask user to select skills (questionary has built-in substring search)
     try:
-        answers = inquirer.prompt(questions)
+        selected = questionary.checkbox(
+            f"Select skills to {operation} (type to filter, space: toggle, enter: confirm)",
+            choices=choices,
+            use_search_filter=True,
+            use_jk_keys=False,
+        ).ask()
     except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled.[/yellow]")
         return None
 
-    if answers is None:
+    if selected is None:
         console.print("\n[yellow]Cancelled.[/yellow]")
         return None
 
-    raw_selected = set(answers["selected"])
-
-    # Handle "[Select All]" option and map choices back to skill names
-    if "[Select All]" in raw_selected:
-        selected = set(skill_names)
-        console.print(f"\n[dim]All {len(selected)} skills selected[/dim]")
-    elif not raw_selected:
+    if not selected:
         console.print("\n[dim]No skills selected.[/dim]")
         return set()
-    else:
-        selected = {choice_to_name[c] for c in raw_selected}
 
-    return selected
+    result = set(selected)
+    if result:
+        console.print(f"\n[dim]{len(result)} skill(s) selected[/dim]")
+
+    return result
 
 
 def run_skill_tui(source_path: Path, target_path: Path) -> None:
-    """Run interactive skill selection using inquirer.
+    """Run interactive skill selection using questionary.
 
     Displays a table of current skills and prompts the user to select
     which skills to enable via checkboxes.
@@ -158,21 +129,12 @@ def run_skill_tui(source_path: Path, target_path: Path) -> None:
 
     # Confirm
     try:
-        import inquirer
-
-        confirm_questions = [
-            inquirer.Confirm(
-                "confirm",
-                message="Apply these changes?",
-                default=True,
-            ),
-        ]
-        confirm_answer = inquirer.prompt(confirm_questions)
+        confirm = questionary.confirm("Apply these changes?", default=True).ask()
     except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled.[/yellow]")
         return
 
-    if confirm_answer and confirm_answer["confirm"]:
+    if confirm:
         enabled, disabled = manager.apply_changes(selected)
 
         console.print()

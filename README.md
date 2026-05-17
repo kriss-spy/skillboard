@@ -494,4 +494,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Inspired by [OpenSkills](https://github.com/numman-ali/openskills) for the checkbox interface pattern
 - Built with [Click](https://click.palletsprojects.com/) for CLI and [Rich](https://rich.readthedocs.io/) for beautiful output
-- Uses [inquirer](https://github.com/magmax/python-inquirer) for interactive prompts
+- Uses [questionary](https://github.com/tmbo/questionary) for interactive prompts with searchable selection

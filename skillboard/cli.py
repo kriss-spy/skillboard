@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+import questionary
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -440,20 +441,10 @@ def copy(
     # Confirm before copying
     if not all:
         try:
-            import inquirer
-        except ImportError:
-            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
-            console.print("Install with: pip install inquirer")
-            return
-
-        try:
-            confirm_q = [
-                inquirer.Confirm(
-                    "confirm", message=f"Copy {len(selected_skills)} skill(s)?", default=True
-                )
-            ]
-            confirm_a = inquirer.prompt(confirm_q)
-            if not confirm_a or not confirm_a["confirm"]:
+            confirm = questionary.confirm(
+                f"Copy {len(selected_skills)} skill(s)?", default=True
+            ).ask()
+            if not confirm:
                 console.print("\n[yellow]Cancelled.[/yellow]")
                 return
         except KeyboardInterrupt:
@@ -598,20 +589,10 @@ def move(
     )
 
     try:
-        import inquirer
-    except ImportError:
-        console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
-        console.print("Install with: pip install inquirer")
-        return
-
-    try:
-        confirm_q = [
-            inquirer.Confirm(
-                "confirm", message=f"Move {len(selected_skills)} skill(s)?", default=False
-            )
-        ]
-        confirm_a = inquirer.prompt(confirm_q)
-        if not confirm_a or not confirm_a["confirm"]:
+        confirm = questionary.confirm(
+            f"Move {len(selected_skills)} skill(s)?", default=False
+        ).ask()
+        if not confirm:
             console.print("\n[yellow]Cancelled.[/yellow]")
             return
     except KeyboardInterrupt:
@@ -749,22 +730,11 @@ def remove(
         )
 
         try:
-            import inquirer
-        except ImportError:
-            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
-            console.print("Install with: pip install inquirer")
-            return
-
-        try:
-            confirm_q = [
-                inquirer.Confirm(
-                    "confirm",
-                    message=f"Remove {len(selected_skills)} skill(s)?",
-                    default=False,
-                )
-            ]
-            confirm_a = inquirer.prompt(confirm_q)
-            if not confirm_a or not confirm_a["confirm"]:
+            confirm = questionary.confirm(
+                f"Remove {len(selected_skills)} skill(s)?",
+                default=False,
+            ).ask()
+            if not confirm:
                 console.print("\n[yellow]Cancelled.[/yellow]")
                 return
         except KeyboardInterrupt:
@@ -1175,22 +1145,11 @@ def cleanup(agent: Optional[str], dry_run: bool, cleanup_all: bool, scope: str) 
     # Confirm unless --all
     if not cleanup_all:
         try:
-            import inquirer
-        except ImportError:
-            console.print("[red]Error: 'inquirer' package is required for interactive mode.[/red]")
-            console.print("Install with: pip install inquirer")
-            return
-
-        try:
-            confirm_q = [
-                inquirer.Confirm(
-                    "confirm",
-                    message=f"Remove {len(orphaned)} orphaned skill(s)?",
-                    default=False,
-                )
-            ]
-            confirm_a = inquirer.prompt(confirm_q)
-            if not confirm_a or not confirm_a["confirm"]:
+            confirm = questionary.confirm(
+                f"Remove {len(orphaned)} orphaned skill(s)?",
+                default=False,
+            ).ask()
+            if not confirm:
                 console.print("\n[yellow]Cancelled.[/yellow]")
                 return
         except KeyboardInterrupt:
